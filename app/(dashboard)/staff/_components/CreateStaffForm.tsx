@@ -16,6 +16,7 @@ import {
   Calculator,
   CheckCircle,
   AlertCircle,
+  Package,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -47,20 +48,10 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 
-import { createStaff } from "@/actions/auth-actions";
+import { createStaffForm } from "@/actions/auth-actions";
 import { StaffRole } from "@/types/staff";
 import { getPermissionsForRole } from "@/lib/client-permissions";
-import { useFormValidation } from "@/hooks/useFormValidation";
-import { staffProfileSchema } from "@/lib/staff-form-validation";
-import {
-  FormErrorDisplay,
-  SuccessDisplay,
-} from "@/components/shared/FormErrorDisplay";
-import {
-  LoadingButton,
-  FormLoadingOverlay,
-} from "@/components/shared/LoadingStates";
-import { useErrorHandler } from "@/hooks/useErrorHandler";
+
 
 // Form validation schema
 const createStaffSchema = z.object({
@@ -75,7 +66,7 @@ const createStaffSchema = z.object({
   email: z.string().email("Invalid email address").min(1, "Email is required"),
   username: z.string().optional().or(z.literal("")),
   phoneNumber: z.string().optional().or(z.literal("")),
-  role: z.enum(["reception", "kitchen", "bar", "accountant"]),
+  role: z.enum(["reception", "kitchen", "bar", "accountant", "storekeeper", "waiter"]),
 });
 
 type FormData = z.infer<typeof createStaffSchema>;
@@ -107,6 +98,20 @@ const roleConfig = {
     color:
       "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
   },
+  storekeeper: {
+    description:
+      "Manage inventory, track stock levels, and handle supply orders",
+    icon: Package,
+    color:
+      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+  },
+  waiter: {
+    description:
+      "Take orders, serve customers, and manage table service",
+    icon: Users,
+    color:
+      "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400",
+  },
 } as const;
 
 interface CreateStaffFormProps {
@@ -120,8 +125,6 @@ export default function CreateStaffForm({
 }: CreateStaffFormProps) {
   const [isPending, startTransition] = useTransition();
   const [selectedRole, setSelectedRole] = useState<StaffRole | null>(null);
-  const [createSuccess, setCreateSuccess] = useState<string | null>(null);
-  const { handleError, showSuccessToast, showErrorToast } = useErrorHandler();
 
   const form = useForm<FormData>({
     resolver: zodResolver(createStaffSchema),
@@ -135,55 +138,7 @@ export default function CreateStaffForm({
     },
   });
 
-  // Enhanced form validation with better error handling
-  const {
-    values: formValues,
-    errors: formErrors,
-    isSubmitting: isFormSubmitting,
-    setValue: setFormValue,
-    handleSubmit: handleFormSubmit,
-    getFieldProps,
-    clearErrors,
-  } = useFormValidation<FormData>({
-    schema: createStaffSchema,
-    onSubmit: async (data) => {
-      try {
-        const formData = new FormData();
-        formData.append("firstName", data.firstName);
-        formData.append("lastName", data.lastName);
-        formData.append("email", data.email);
-        formData.append("username", data.username || "");
-        formData.append("phoneNumber", data.phoneNumber || "");
-        formData.append("role", data.role);
-
-        // Get permissions for the selected role
-        const permissions = getPermissionsForRole(data.role);
-        formData.append("permissions", JSON.stringify(permissions));
-
-        await createStaff(formData);
-
-        // Show success message
-        setCreateSuccess("Staff member created successfully!");
-        showSuccessToast("Staff member created successfully!", {
-          duration: 3000,
-        });
-
-        // Call onSuccess callback after a short delay
-        setTimeout(() => {
-          onSuccess?.();
-        }, 1500);
-      } catch (error) {
-        console.error("Error creating staff:", error);
-        handleError(error as Error);
-        throw error;
-      }
-    },
-    onError: (errors) => {
-      showErrorToast("Please fix the form errors and try again");
-    },
-    validateOnChange: true,
-    validateOnBlur: true,
-  });
+  // Remove the duplicate form validation hook since we're using react-hook-form
 
   const handleSubmit = (data: FormData) => {
     startTransition(async () => {
@@ -196,18 +151,22 @@ export default function CreateStaffForm({
         formData.append("phoneNumber", data.phoneNumber || "");
         formData.append("role", data.role);
 
-        // Get permissions for the selected role
         const permissions = getPermissionsForRole(data.role);
         formData.append("permissions", JSON.stringify(permissions));
 
-        await createStaff(formData);
+        const result = await createStaffForm(formData);
 
-        // Show success toast
+        // Show success toast with PIN
         toast.success("Staff member created successfully!", {
-          description: "The staff member has been added to your team.",
+          description: `PIN: ${result.staff.pin} | Role: ${result.staff.role}`,
+          duration: 10000, // Show for 10 seconds so user can copy PIN
         });
 
-        // Call onSuccess callback to trigger refetch and close
+        // Reset form
+        form.reset();
+        setSelectedRole(null);
+
+        // Call onSuccess callback to trigger refetch and close modal
         onSuccess?.();
       } catch (error) {
         console.error("Error creating staff:", error);

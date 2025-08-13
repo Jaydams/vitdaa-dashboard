@@ -652,7 +652,7 @@ export async function handleOAuthUserCreation(user: User): Promise<string> {
 }
 
 // Staff management actions
-export async function createStaff(formData: FormData) {
+export async function createStaffForm(formData: FormData) {
   const firstName = formData.get("firstName") as string;
   const lastName = formData.get("lastName") as string;
   const email = formData.get("email") as string;
@@ -662,7 +662,7 @@ export async function createStaff(formData: FormData) {
   const customPermissions = formData.get("customPermissions") as string;
 
   if (!firstName || !lastName || !email || !role) {
-    redirect("/staff?error=missing-required-fields");
+    throw new Error("Missing required fields");
   }
 
   try {
@@ -675,12 +675,12 @@ export async function createStaff(formData: FormData) {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      redirect("/login?error=authentication-required");
+      throw new Error("Authentication required");
     }
 
     const businessOwner = await validateBusinessOwner(user.id);
     if (!businessOwner) {
-      redirect("/login?error=unauthorized-access");
+      throw new Error("Unauthorized access");
     }
 
     // Import role utilities for proper permission assignment
@@ -692,7 +692,7 @@ export async function createStaff(formData: FormData) {
 
     // Validate role constraints
     if (!isValidRole(role)) {
-      redirect("/staff?error=invalid-role");
+      throw new Error("Invalid role");
     }
 
     // Generate secure PIN for staff member
@@ -708,15 +708,11 @@ export async function createStaff(formData: FormData) {
         // Validate custom permissions
         const validation = validatePermissions(parsedCustomPermissions);
         if (!validation.isValid) {
-          redirect(
-            `/staff?error=invalid-permissions&details=${encodeURIComponent(
-              validation.invalidPermissions.join(", ")
-            )}`
-          );
+          throw new Error(`Invalid permissions: ${validation.invalidPermissions.join(", ")}`);
         }
       } catch (error) {
         console.error("Error parsing custom permissions:", error);
-        redirect("/staff?error=invalid-permissions-format");
+        throw new Error("Invalid permissions format");
       }
     }
 
@@ -734,11 +730,7 @@ export async function createStaff(formData: FormData) {
 
     if (!staffPreparation.success) {
       const errorMessage = staffPreparation.errors.join(", ");
-      redirect(
-        `/staff?error=validation-failed&details=${encodeURIComponent(
-          errorMessage
-        )}`
-      );
+      throw new Error(`Validation failed: ${errorMessage}`);
     }
 
     // Get role-based permissions (this ensures consistency)
@@ -773,20 +765,20 @@ export async function createStaff(formData: FormData) {
       if (staffError.code === "23505") {
         // Unique constraint violation - check which field
         if (staffError.message.includes("email")) {
-          redirect("/staff?error=email-already-exists");
+          throw new Error("Email already exists");
         } else if (staffError.message.includes("phone")) {
-          redirect("/staff?error=phone-already-exists");
+          throw new Error("Phone number already exists");
         } else {
-          redirect("/staff?error=staff-already-exists");
+          throw new Error("Staff member already exists");
         }
       }
 
       if (staffError.code === "23514") {
         // Check constraint violation - likely role constraint
-        redirect("/staff?error=invalid-role-constraint");
+        throw new Error("Invalid role constraint");
       }
 
-      redirect("/staff?error=staff-creation-failed");
+      throw new Error("Staff creation failed");
     }
 
     // Log staff creation activity
@@ -806,24 +798,21 @@ export async function createStaff(formData: FormData) {
     // Revalidate the staff list page
     revalidatePath("/staff");
 
-    // Return success with the generated PIN (in a real app, you'd send this via SMS/email)
-    redirect(
-      `/staff?success=staff-created&pin=${pin}&staffId=${staff.id}&role=${role}`
-    );
+    // Return success data instead of redirecting
+    return {
+      success: true,
+      staff: {
+        id: staff.id,
+        firstName: staff.first_name,
+        lastName: staff.last_name,
+        email: staff.email,
+        role: staff.role,
+        pin: pin,
+      },
+    };
   } catch (error) {
-    // Re-throw redirect errors (these are expected)
-    if (
-      error &&
-      typeof error === "object" &&
-      "digest" in error &&
-      typeof error.digest === "string" &&
-      error.digest.includes("NEXT_REDIRECT")
-    ) {
-      throw error;
-    }
-
     console.error("Create staff error:", error);
-    redirect("/staff?error=server-error");
+    throw error;
   }
 }
 

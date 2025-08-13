@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Metadata } from "next";
-import { Users, Shield, UserPlus, Activity, Settings } from "lucide-react";
+import { Users, Shield, UserPlus, Activity, Settings, AlertCircle } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
 import PageTitle from "@/components/shared/PageTitle";
 import StaffFilters from "./_components/StaffFilters";
@@ -14,10 +16,68 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function StaffPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [refetchTrigger, setRefetchTrigger] = useState(0);
+  const searchParams = useSearchParams();
+
+  // Handle URL error parameters
+  useEffect(() => {
+    const error = searchParams.get("error");
+    const success = searchParams.get("success");
+    
+    if (error) {
+      switch (error) {
+        case "email-already-exists":
+          toast.error("Email Already Exists", {
+            description: "A staff member with this email address already exists in your business. Please use a different email address.",
+          });
+          break;
+        case "phone-already-exists":
+          toast.error("Phone Number Already Exists", {
+            description: "A staff member with this phone number already exists in your business. Please use a different phone number.",
+          });
+          break;
+        case "staff-already-exists":
+          toast.error("Staff Member Already Exists", {
+            description: "A staff member with these details already exists in your business.",
+          });
+          break;
+        case "missing-required-fields":
+          toast.error("Missing Required Fields", {
+            description: "Please fill in all required fields to create a staff member.",
+          });
+          break;
+        case "invalid-role":
+          toast.error("Invalid Role", {
+            description: "The selected role is not valid. Please choose a valid role.",
+          });
+          break;
+        case "staff-creation-failed":
+          toast.error("Staff Creation Failed", {
+            description: "Failed to create staff member. Please try again or contact support.",
+          });
+          break;
+        default:
+          toast.error("Error", {
+            description: "An error occurred. Please try again.",
+          });
+      }
+    }
+
+    if (success === "staff-created") {
+      const pin = searchParams.get("pin");
+      const staffId = searchParams.get("staffId");
+      const role = searchParams.get("role");
+      
+      toast.success("Staff Member Created Successfully!", {
+        description: `PIN: ${pin} | Role: ${role}`,
+        duration: 10000, // Show for 10 seconds so user can copy PIN
+      });
+    }
+  }, [searchParams]);
 
   const handleCreateSuccess = () => {
     // Trigger refetch by incrementing the trigger
