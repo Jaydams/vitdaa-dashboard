@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ShoppingCart,
   Users,
@@ -18,6 +18,7 @@ import {
   MapPin,
   Eye,
   DollarSign,
+  RefreshCw,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,147 +29,192 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { StaffSession } from "@/types/auth";
 import { PermissionGuard } from "./RoleBasedDashboard";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 interface ReceptionDashboardProps {
   staffSession: StaffSession;
+}
+
+interface ReceptionStats {
+  activeOrders: number;
+  availableTables: number;
+  totalTables: number;
+  pendingPayments: number;
+  todayRevenue: number;
+  customersServed: number;
+  todayOrders: number;
+}
+
+interface ReceptionOrder {
+  id: string;
+  invoice_no: string;
+  tableNumber: number | null;
+  customerName: string;
+  customerPhone: string | null;
+  customerEmail: string | null;
+  items: Array<{
+    name: string;
+    quantity: number;
+    price: number;
+  }>;
+  itemCount: number;
+  total: number;
+  status: string;
+  time: string;
+  paymentStatus: string;
+  paymentMethod: string | null;
+  specialRequests: string | null;
+  createdAt: string;
+}
+
+interface ReceptionTable {
+  number: number;
+  status: string;
+  customerName: string | null;
+  customerPhone: string | null;
+  partySize: number;
+  orderTotal: number;
+  seatedAt: string | null;
+  orderId: string | null;
+  capacity: number;
+  location: string | null;
 }
 
 export default function ReceptionDashboard({
   staffSession,
 }: ReceptionDashboardProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState<ReceptionStats>({
+    activeOrders: 0,
+    availableTables: 0,
+    totalTables: 0,
+    pendingPayments: 0,
+    todayRevenue: 0,
+    customersServed: 0,
+    todayOrders: 0,
+  });
+  const [recentOrders, setRecentOrders] = useState<ReceptionOrder[]>([]);
+  const [tables, setTables] = useState<ReceptionTable[]>([]);
   const { permissions } = staffSession;
+  const router = useRouter();
 
-  // Mock data - in real implementation, this would come from API calls
-  const mockStats = {
-    activeOrders: 12,
-    availableTables: 8,
-    totalTables: 15,
-    pendingPayments: 3,
-    todayRevenue: 2450.75,
-    customersServed: 24,
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchReceptionData();
+    setupRealtimeSubscription();
+  }, []);
+
+  const setupRealtimeSubscription = () => {
+    const supabase = createClient();
+
+    const channel = supabase
+      .channel('reception-dashboard-realtime')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'orders',
+      }, (payload) => {
+        console.log('Reception orders realtime change:', payload);
+        fetchReceptionData();
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'order_items',
+      }, (payload) => {
+        console.log('Reception order items realtime change:', payload);
+        fetchReceptionData();
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'payments',
+      }, (payload) => {
+        console.log('Reception payments realtime change:', payload);
+        fetchReceptionData();
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tables',
+      }, (payload) => {
+        console.log('Reception tables realtime change:', payload);
+        fetchReceptionData();
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'order_status_history',
+      }, (payload) => {
+        console.log('Reception order status history realtime change:', payload);
+        fetchReceptionData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   };
 
-  const mockRecentOrders = [
-    {
-      id: "ORD-001",
-      tableNumber: 5,
-      customerName: "John Doe",
-      customerPhone: "+1234567890",
-      customerEmail: "john.doe@email.com",
-      items: [
-        { name: "Grilled Chicken", quantity: 1, price: 25.5 },
-        { name: "Caesar Salad", quantity: 2, price: 10.0 },
-      ],
-      itemCount: 3,
-      total: 45.5,
-      status: "preparing",
-      time: "10 mins ago",
-      paymentStatus: "pending",
-      paymentMethod: null,
-      specialRequests: "No onions",
-    },
-    {
-      id: "ORD-002",
-      tableNumber: 12,
-      customerName: "Jane Smith",
-      customerPhone: "+1234567891",
-      customerEmail: "jane.smith@email.com",
-      items: [
-        { name: "Beef Burger", quantity: 1, price: 18.75 },
-        { name: "French Fries", quantity: 1, price: 10.0 },
-      ],
-      itemCount: 2,
-      total: 28.75,
-      status: "ready",
-      time: "5 mins ago",
-      paymentStatus: "pending",
-      paymentMethod: null,
-      specialRequests: null,
-    },
-    {
-      id: "ORD-003",
-      tableNumber: 3,
-      customerName: "Mike Johnson",
-      customerPhone: "+1234567892",
-      customerEmail: "mike.johnson@email.com",
-      items: [
-        { name: "Fish & Chips", quantity: 2, price: 22.25 },
-        { name: "Soft Drink", quantity: 2, price: 8.0 },
-      ],
-      itemCount: 4,
-      total: 62.25,
-      status: "served",
-      time: "15 mins ago",
-      paymentStatus: "paid",
-      paymentMethod: "card",
-      specialRequests: "Extra tartar sauce",
-    },
-  ];
+  const fetchReceptionData = async () => {
+    setIsLoading(true);
+    try {
+      // Import server actions
+      const { fetchOrders, getOrderStats } = await import('@/actions/order-actions');
+      
+      // Fetch data using server actions
+      const [statsData, ordersData] = await Promise.all([
+        getOrderStats(),
+        fetchOrders({ page: 1, perPage: 10 })
+      ]);
 
-  const mockTables = [
-    {
-      number: 1,
-      status: "occupied",
-      customerName: "Alice Brown",
-      customerPhone: "+1234567893",
-      partySize: 2,
-      orderTotal: 35.0,
-      seatedAt: "12:30 PM",
-      orderId: "ORD-004",
-    },
-    {
-      number: 2,
-      status: "available",
-      customerName: null,
-      customerPhone: null,
-      partySize: 0,
-      orderTotal: 0,
-      seatedAt: null,
-      orderId: null,
-    },
-    {
-      number: 3,
-      status: "reserved",
-      customerName: "Bob Wilson",
-      customerPhone: "+1234567894",
-      partySize: 4,
-      orderTotal: 0,
-      seatedAt: null,
-      orderId: null,
-      reservationTime: "1:00 PM",
-    },
-    {
-      number: 4,
-      status: "occupied",
-      customerName: "Carol Davis",
-      customerPhone: "+1234567895",
-      partySize: 3,
-      orderTotal: 42.5,
-      seatedAt: "12:45 PM",
-      orderId: "ORD-005",
-    },
-    {
-      number: 5,
-      status: "cleaning",
-      customerName: null,
-      customerPhone: null,
-      partySize: 0,
-      orderTotal: 0,
-      seatedAt: null,
-      orderId: null,
-    },
-    {
-      number: 6,
-      status: "occupied",
-      customerName: "David Lee",
-      customerPhone: "+1234567896",
-      partySize: 2,
-      orderTotal: 28.75,
-      seatedAt: "1:15 PM",
-      orderId: "ORD-006",
-    },
-  ];
+      // Transform stats data
+      setStats({
+        activeOrders: statsData.today.pending + statsData.today.processing || 0,
+        availableTables: 0, // We'll add this later
+        totalTables: 0, // We'll add this later
+        pendingPayments: statsData.today.pending || 0,
+        todayRevenue: statsData.today.revenue || 0,
+        customersServed: statsData.today.total || 0,
+        todayOrders: statsData.today.total || 0,
+      });
+
+      // Transform orders data
+      const transformedOrders = ordersData.data?.map((order: any) => ({
+        id: order.id,
+        invoice_no: order.invoice_no,
+        tableNumber: order.table?.table_number || null,
+        customerName: order.customer_name || "Walk-in Customer",
+        customerPhone: order.customer_phone || null,
+        customerEmail: order.customer?.email || null,
+        items: order.items?.map((item: any) => ({
+          name: item.menu_item_name,
+          quantity: item.quantity,
+          price: item.menu_item_price
+        })) || [],
+        itemCount: order.items?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0,
+        total: order.total_amount || 0,
+        status: order.status,
+        time: new Date(order.created_at).toLocaleTimeString(),
+        paymentStatus: order.payment?.[0]?.status || "pending",
+        paymentMethod: order.payment?.[0]?.payment_method || null,
+        specialRequests: order.notes,
+        createdAt: order.created_at
+      })) || [];
+      setRecentOrders(transformedOrders);
+
+      // For tables, we'll use a simple approach for now
+      setTables([]);
+    } catch (error) {
+      console.error('Error fetching reception data:', error);
+      toast.error('Failed to load reception data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -178,6 +224,8 @@ export default function ReceptionDashboard({
         return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
       case "served":
         return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
+      case "delivered":
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
     }
@@ -200,7 +248,7 @@ export default function ReceptionDashboard({
 
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
-      case "paid":
+      case "completed":
         return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
       case "pending":
         return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
@@ -219,6 +267,8 @@ export default function ReceptionDashboard({
         return <CheckCircle className="h-4 w-4" />;
       case "served":
         return <CheckCircle className="h-4 w-4" />;
+      case "delivered":
+        return <CheckCircle className="h-4 w-4" />;
       default:
         return <AlertCircle className="h-4 w-4" />;
     }
@@ -226,24 +276,56 @@ export default function ReceptionDashboard({
 
   // Handler functions for order and table management
   const handleCreateOrder = () => {
-    console.log("Creating new order");
+    // Navigate to order creation page
+    router.push('/admin/orders/create');
   };
 
   const handleAssignTable = (tableNumber: number) => {
-    console.log(`Assigning table ${tableNumber}`);
+    // Navigate to table assignment page
+    router.push(`/admin/tables/${tableNumber}/assign`);
   };
 
-  const handleProcessPayment = (orderId: string) => {
-    console.log(`Processing payment for order ${orderId}`);
+    const handleProcessPayment = async (orderId: string) => {
+    try {
+      // Import server action
+      const { updateOrderStatus } = await import('@/actions/order-actions');
+      
+      // Update order status to delivered
+      await updateOrderStatus(orderId, 'delivered');
+      
+      toast.success('Order marked as delivered');
+      fetchReceptionData(); // Refresh data
+    } catch (error) {
+      console.error('Payment processing error:', error);
+      toast.error('Failed to process payment');
+    }
   };
 
   const handleCustomerLookup = (customerInfo: string) => {
-    console.log(`Looking up customer: ${customerInfo}`);
+    // Navigate to customer lookup page
+    router.push(`/admin/customers?search=${encodeURIComponent(customerInfo)}`);
   };
 
   const handleViewOrderDetails = (orderId: string) => {
-    console.log(`Viewing details for order ${orderId}`);
+    // Navigate to order details page
+    router.push(`/admin/orders/${orderId}`);
   };
+
+  const filteredOrders = recentOrders.filter(order =>
+    order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    order.invoice_no.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="text-muted-foreground">Loading reception dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -262,7 +344,7 @@ export default function ReceptionDashboard({
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                {mockStats.activeOrders}
+                {stats.activeOrders}
               </div>
               <p className="text-xs text-blue-600 dark:text-blue-400">
                 Currently being prepared
@@ -284,7 +366,7 @@ export default function ReceptionDashboard({
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-900 dark:text-green-100">
-                {mockStats.availableTables}/{mockStats.totalTables}
+                {stats.availableTables}/{stats.totalTables}
               </div>
               <p className="text-xs text-green-600 dark:text-green-400">
                 Tables ready for seating
@@ -306,7 +388,7 @@ export default function ReceptionDashboard({
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-                {mockStats.customersServed}
+                {stats.customersServed}
               </div>
               <p className="text-xs text-purple-600 dark:text-purple-400">Today's total</p>
             </CardContent>
@@ -326,7 +408,7 @@ export default function ReceptionDashboard({
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">
-                ₦{mockStats.todayRevenue.toLocaleString()}
+                ₦{stats.todayRevenue.toLocaleString()}
               </div>
               <p className="text-xs text-orange-600 dark:text-orange-400">
                 +12% from yesterday
@@ -350,7 +432,7 @@ export default function ReceptionDashboard({
               permissions={permissions}
               requiredPermission="orders:create"
             >
-              <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg">
+              <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg" onClick={handleCreateOrder}>
                 <Plus className="h-4 w-4 mr-2" />
                 New Order
               </Button>
@@ -360,7 +442,7 @@ export default function ReceptionDashboard({
               permissions={permissions}
               requiredPermission="tables:update"
             >
-              <Button variant="outline" className="border-2 hover:bg-gray-50 dark:hover:bg-gray-800">
+              <Button variant="outline" className="border-2 hover:bg-gray-50 dark:hover:bg-gray-800" onClick={() => handleAssignTable(0)}>
                 <Table className="h-4 w-4 mr-2" />
                 Assign Table
               </Button>
@@ -370,7 +452,7 @@ export default function ReceptionDashboard({
               permissions={permissions}
               requiredPermission="customers:read"
             >
-              <Button variant="outline" className="border-2 hover:bg-gray-50 dark:hover:bg-gray-800">
+              <Button variant="outline" className="border-2 hover:bg-gray-50 dark:hover:bg-gray-800" onClick={() => handleCustomerLookup("All Customers")}>
                 <Users className="h-4 w-4 mr-2" />
                 Customer Lookup
               </Button>
@@ -380,7 +462,7 @@ export default function ReceptionDashboard({
               permissions={permissions}
               requiredPermission="payments:process"
             >
-              <Button variant="outline" className="border-2 hover:bg-gray-50 dark:hover:bg-gray-800">
+              <Button variant="outline" className="border-2 hover:bg-gray-50 dark:hover:bg-gray-800" onClick={() => handleProcessPayment("ORD-001")}>
                 <CreditCard className="h-4 w-4 mr-2" />
                 Process Payment
               </Button>
@@ -415,7 +497,7 @@ export default function ReceptionDashboard({
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {mockRecentOrders.map((order) => (
+                {filteredOrders.map((order) => (
                   <div
                     key={order.id}
                     className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-md transition-shadow"
@@ -521,7 +603,7 @@ export default function ReceptionDashboard({
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {mockTables.map((table) => (
+                {tables.map((table) => (
                   <div key={table.number} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
@@ -552,9 +634,9 @@ export default function ReceptionDashboard({
                       </div>
                     )}
 
-                    {table.status === "reserved" && table.reservationTime && (
+                    {table.status === "reserved" && (
                       <div className="text-sm text-muted-foreground mb-3 p-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded">
-                        Reserved for: {table.reservationTime}
+                        Reserved
                       </div>
                     )}
 
@@ -586,7 +668,7 @@ export default function ReceptionDashboard({
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleCustomerLookup(table.customerName)}
+                            onClick={() => handleCustomerLookup(table.customerName!)}
                             className="flex-1"
                           >
                             Customer Info
@@ -595,7 +677,7 @@ export default function ReceptionDashboard({
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleViewOrderDetails(table.orderId)}
+                              onClick={() => handleViewOrderDetails(table.orderId!)}
                               className="flex-1"
                             >
                               View Order
@@ -645,7 +727,7 @@ export default function ReceptionDashboard({
                 </div>
 
                 <div className="space-y-4">
-                  {mockRecentOrders.slice(0, 3).map((order) => (
+                  {recentOrders.slice(0, 3).map((order) => (
                     <div key={order.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-md transition-shadow">
                       <div className="flex items-center justify-between mb-3">
                         <div className="font-semibold text-gray-900 dark:text-gray-100">

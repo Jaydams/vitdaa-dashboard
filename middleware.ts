@@ -7,6 +7,11 @@ export async function middleware(request: NextRequest) {
 
   // Check if there's an active staff session
   const staffSessionToken = request.cookies.get("staff_session_token")?.value;
+  
+  // Allow staff access to inventory APIs
+  if (pathname.startsWith("/api/inventory")) {
+    return NextResponse.next();
+  }
 
   // Debug logging for admin login issues
   if (pathname.startsWith("/admin/login")) {
@@ -28,6 +33,7 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith("/api/business/info") ||
       pathname.startsWith("/api/staff/signout") ||
       pathname.startsWith("/api/staff/switch-to-admin") ||
+      pathname.startsWith("/api/staff/reception") ||
       pathname === "/login"
     ) {
       // Allow admin authentication routes, staff signout, and main login
