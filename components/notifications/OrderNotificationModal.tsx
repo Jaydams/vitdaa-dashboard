@@ -41,6 +41,7 @@ interface NewOrder {
   table_id?: string;
   created_at: string;
   business_id: string;
+  status: string;
 }
 
 interface OrderNotificationModalProps {

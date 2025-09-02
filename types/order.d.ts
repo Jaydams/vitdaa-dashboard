@@ -1,5 +1,15 @@
-export type OrderStatus = "pending" | "processing" | "ready" | "delivered" | "cancelled";
-export type OrderMethod = "cash" | "wallet" | "card";
+export type OrderStatus =
+  | "pending"
+  | "processing"
+  | "ready"
+  | "delivered"
+  | "cancelled";
+export type OrderMethod =
+  | "cash"
+  | "wallet"
+  | "card"
+  | "transfer"
+  | "direct_debit";
 export type DiningOption = "indoor" | "delivery";
 
 export type OrderItem = {

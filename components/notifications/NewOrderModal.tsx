@@ -26,6 +26,7 @@ import {
   VolumeX,
 } from "lucide-react";
 import { updateOrderStatus } from "@/actions/order-actions";
+import { Order, OrderStatus, OrderMethod, DiningOption } from "@/types/order";
 
 interface NewOrder {
   id: string;
@@ -34,11 +35,12 @@ interface NewOrder {
   customer_phone: string;
   customer_address?: string;
   total_amount: number;
-  payment_method: string;
-  dining_option: string;
+  payment_method: OrderMethod;
+  dining_option: DiningOption;
   table_id?: string;
   created_at: string;
   business_id: string;
+  status: OrderStatus;
 }
 
 interface NewOrderModalProps {
