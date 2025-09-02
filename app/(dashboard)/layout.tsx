@@ -6,6 +6,8 @@ import Header from "@/components/shared/header";
 import Container from "@/components/ui/container";
 import AppSidebar from "@/components/shared/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import NewOrderModal from "@/components/notifications/NewOrderModal";
+import { getServerBusinessOwnerId } from "@/lib/getServerBusinessOwnerId";
 
 export default async function RootLayout({
   children,
@@ -23,6 +25,9 @@ export default async function RootLayout({
   const cookieStore = await cookies();
   const defaultOpen = cookieStore.get("sidebar_state")?.value === "true";
 
+  // Get business ID for notifications
+  const businessId = await getServerBusinessOwnerId();
+
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
       <AppSidebar />
@@ -33,6 +38,9 @@ export default async function RootLayout({
         <main className="pt-6 pb-8">
           <Container>{children}</Container>
         </main>
+
+        {/* Order notification modal */}
+        {businessId && <NewOrderModal businessId={businessId} />}
       </div>
     </SidebarProvider>
   );

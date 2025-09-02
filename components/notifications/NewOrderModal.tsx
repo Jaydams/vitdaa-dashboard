@@ -63,7 +63,7 @@ export default function NewOrderModal({ businessId }: NewOrderModalProps) {
     if (soundEnabled) {
       try {
         const audioContext = new (window.AudioContext ||
-          (window as any).webkitAudioContext)();
+          (window as unknown).webkitAudioContext)();
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
 
@@ -174,6 +174,7 @@ export default function NewOrderModal({ businessId }: NewOrderModalProps) {
     currentOrder,
     orderQueue,
     soundEnabled,
+    playNotificationSound,
   ]);
 
   const handleOrderAction = async (
