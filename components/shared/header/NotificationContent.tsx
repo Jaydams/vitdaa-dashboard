@@ -39,10 +39,61 @@ export default function NotificationContent() {
         (payload) => {
           console.log("New pending order notification:", payload);
 
-          // Show toast notification
-          toast.info("New order received!", {
-            description: `Order from ${payload.new.customer_name}`,
+          // Play notification sound
+          try {
+            const audioContext = new (window.AudioContext ||
+              (window as any).webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.value = 800;
+            oscillator.type = "sine";
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(
+              0.01,
+              audioContext.currentTime + 0.5
+            );
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+          } catch (error) {
+            console.error("Error playing notification sound:", error);
+          }
+
+          // Show enhanced toast notification with action
+          toast.info("🔔 New Order Received!", {
+            description: `Order from ${payload.new.customer_name} - ₦${
+              payload.new.total_amount?.toLocaleString() || "N/A"
+            }`,
+            duration: 8000,
+            action: {
+              label: "View Details",
+              onClick: () => {
+                // Trigger notification dropdown to open
+                const notificationButton = document.querySelector(
+                  "[data-notification-trigger]"
+                );
+                if (notificationButton) {
+                  (notificationButton as HTMLElement).click();
+                }
+              },
+            },
           });
+
+          // Show browser notification if permission granted
+          if (Notification.permission === "granted") {
+            new Notification("New Order Received!", {
+              body: `Order from ${payload.new.customer_name}`,
+              icon: "/vitdaa_logo.png",
+              tag: "new-order",
+            });
+          } else if (Notification.permission !== "denied") {
+            Notification.requestPermission();
+          }
 
           // Refetch notifications
           refetch();

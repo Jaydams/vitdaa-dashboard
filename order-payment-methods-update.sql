@@ -65,7 +65,107 @@ CREATE INDEX IF NOT EXISTS idx_orders_invoice_phone
 ON public.orders (invoice_no, customer_phone) 
 WHERE customer_id IS NULL;
 
+-- Enable RLS for order_items table
+ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
+
+-- Create policy for inserting order items (anyone can create order items when creating orders)
+DROP POLICY IF EXISTS "Anyone can create order items" ON public.order_items;
+CREATE POLICY "Anyone can create order items" 
+ON public.order_items FOR INSERT 
+WITH CHECK (true);
+
+-- Create policy for business owners to view order items for their orders
+DROP POLICY IF EXISTS "Business owners can view order items" ON public.order_items;
+CREATE POLICY "Business owners can view order items" 
+ON public.order_items FOR SELECT 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.orders 
+    WHERE orders.id = order_items.order_id 
+    AND orders.business_id = auth.uid()
+  )
+);
+
+-- Create policy for customers to view their own order items
+DROP POLICY IF EXISTS "Customers can view their order items" ON public.order_items;
+CREATE POLICY "Customers can view their order items" 
+ON public.order_items FOR SELECT 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.orders 
+    WHERE orders.id = order_items.order_id 
+    AND (orders.customer_id = auth.uid() OR orders.customer_id IS NULL)
+  )
+);
+
+-- Create policy for business owners to update order items
+DROP POLICY IF EXISTS "Business owners can update order items" ON public.order_items;
+CREATE POLICY "Business owners can update order items" 
+ON public.order_items FOR UPDATE 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.orders 
+    WHERE orders.id = order_items.order_id 
+    AND orders.business_id = auth.uid()
+  )
+);
+
+-- Add index for order items queries
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id 
+ON public.order_items (order_id);
+
 -- Add comment to document the change
 COMMENT ON COLUMN public.orders.payment_method IS 'Payment method: cash, wallet, card, or transfer. Transfer orders require manual confirmation.';
 COMMENT ON COLUMN public.orders.status IS 'Order status: pending (awaiting confirmation), processing, delivered, or cancelled. All orders start as pending.';
 COMMENT ON COLUMN public.orders.customer_id IS 'Customer ID for logged-in users, NULL for anonymous orders. Anonymous orders can be tracked using invoice_no + customer_phone.';
+-- Enable RLS for payments table
+ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
+
+-- Create policy for inserting payments (anyone can create payments when creating orders)
+DROP POLICY IF EXISTS "Anyone can create payments" ON public.payments;
+CREATE POLICY "Anyone can create payments" 
+ON public.payments FOR INSERT 
+WITH CHECK (true);
+
+-- Create policy for business owners to view payments for their orders
+DROP POLICY IF EXISTS "Business owners can view payments" ON public.payments;
+CREATE POLICY "Business owners can view payments" 
+ON public.payments FOR SELECT 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.orders 
+    WHERE orders.id = payments.order_id 
+    AND orders.business_id = auth.uid()
+  )
+);
+
+-- Create policy for customers to view their own payments
+DROP POLICY IF EXISTS "Customers can view their payments" ON public.payments;
+CREATE POLICY "Customers can view their payments" 
+ON public.payments FOR SELECT 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.orders 
+    WHERE orders.id = payments.order_id 
+    AND (orders.customer_id = auth.uid() OR orders.customer_id IS NULL)
+  )
+);
+
+-- Create policy for business owners to update payments
+DROP POLICY IF EXISTS "Business owners can update payments" ON public.payments;
+CREATE POLICY "Business owners can update payments" 
+ON public.payments FOR UPDATE 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.orders 
+    WHERE orders.id = payments.order_id 
+    AND orders.business_id = auth.uid()
+  )
+);
+
+-- Add index for payments queries
+CREATE INDEX IF NOT EXISTS idx_payments_order_id 
+ON public.payments (order_id);
+
+COMMENT ON TABLE public.order_items IS 'Order items with RLS policies allowing creation during order placement and viewing by business owners and customers.';
+COMMENT ON TABLE public.payments IS 'Payments with RLS policies allowing creation during order placement and management by business owners.';
