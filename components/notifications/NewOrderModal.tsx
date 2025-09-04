@@ -100,75 +100,6 @@ export default function NewOrderModal({ businessId }: NewOrderModalProps) {
           filter: `business_id=eq.${businessId}`,
         },
         (payload) => {
-          const newOrder = payload.new as NewOrder;
-
-          if (newOrder.status === "pending") {
-            console.log("New order for modal:", newOrder);
-
-            setOrderQueue((prev) => [...prev, newOrder]);
-
-            // If no modal is open, show this order immediately
-            if (!isModalOpen) {
-              setCurrentOrder(newOrder);
-              setIsModalOpen(true);
-            }
-
-            // Create notification in database directly using Supabase client
-            // Use .then() and .catch() instead of await in non-async callbacks
-            supabase
-            .from('notifications')
-            .insert({
-              business_id: newOrder.business_id,
-              type: 'new_order',
-              title: 'New Order Received',
-              message: `New order #${newOrder.invoice_no} from ${newOrder.customer_name}`,
-              data: {
-                order_id: newOrder.id,
-                invoice_no: newOrder.invoice_no,
-                customer_name: newOrder.customer_name,
-                customer_phone: newOrder.customer_phone,
-                total_amount: newOrder.total_amount,
-                payment_method: newOrder.payment_method,
-                dining_option: newOrder.dining_option,
-                table_id: newOrder.table_id,
-                customer_address: newOrder.customer_address,
-              },
-              priority: 'high',
-              is_read: false,
-            })
-            .then(({ error }) => {
-              if (error) {
-                console.error("Error creating order notification:", error);
-              } else {
-                console.log("Order notification created successfully");
-              }
-            });
-
-            // Play notification sound
-            playNotificationSound();
-
-            // Show browser notification
-            if (Notification.permission === "granted") {
-              new Notification("�� New Order Alert!", {
-                body: `Order from ${
-                  newOrder.customer_name
-                } - ₦${newOrder.total_amount.toLocaleString()}`,
-                icon: "/vitdaa_logo.png",
-                tag: `order-${newOrder.id}`,
-              });
-            }
-          }
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "orders",
-          filter: `business_id=eq.${businessId}`,
-        },
-        (payload) => {
           const updatedOrder = payload.new as NewOrder;
 
           // Remove order from queue if status changed from pending
@@ -176,6 +107,32 @@ export default function NewOrderModal({ businessId }: NewOrderModalProps) {
             setOrderQueue((prev) =>
               prev.filter((order) => order.id !== updatedOrder.id)
             );
+
+            // Update the existing notification to reflect the new status
+            supabase
+              .from('notifications')
+              .update({
+                type: 'order_status_change',
+                title: `Order #${updatedOrder.invoice_no} status updated`,
+                message: `Order status changed to ${updatedOrder.status}`,
+                data: {
+                  order_id: updatedOrder.id,
+                  invoice_no: updatedOrder.invoice_no,
+                  previous_status: 'pending',
+                  new_status: updatedOrder.status,
+                  customer_name: updatedOrder.customer_name,
+                },
+                is_read: false,
+              })
+              .eq('type', 'new_order')
+              .eq('data->order_id', updatedOrder.id)
+              .then(({ error }) => {
+                if (error) {
+                  console.error("Error updating notification:", error);
+                } else {
+                  console.log("Notification updated successfully");
+                }
+              });
 
             // If this was the current order, close modal or show next
             if (currentOrder?.id === updatedOrder.id) {
