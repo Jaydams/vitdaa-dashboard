@@ -113,12 +113,43 @@ export default function NewOrderModal({ businessId }: NewOrderModalProps) {
               setIsModalOpen(true);
             }
 
+            // Create notification in database directly using Supabase client
+            // Use .then() and .catch() instead of await in non-async callbacks
+            supabase
+            .from('notifications')
+            .insert({
+              business_id: newOrder.business_id,
+              type: 'new_order',
+              title: 'New Order Received',
+              message: `New order #${newOrder.invoice_no} from ${newOrder.customer_name}`,
+              data: {
+                order_id: newOrder.id,
+                invoice_no: newOrder.invoice_no,
+                customer_name: newOrder.customer_name,
+                customer_phone: newOrder.customer_phone,
+                total_amount: newOrder.total_amount,
+                payment_method: newOrder.payment_method,
+                dining_option: newOrder.dining_option,
+                table_id: newOrder.table_id,
+                customer_address: newOrder.customer_address,
+              },
+              priority: 'high',
+              is_read: false,
+            })
+            .then(({ error }) => {
+              if (error) {
+                console.error("Error creating order notification:", error);
+              } else {
+                console.log("Order notification created successfully");
+              }
+            });
+
             // Play notification sound
             playNotificationSound();
 
             // Show browser notification
             if (Notification.permission === "granted") {
-              new Notification("🔔 New Order Alert!", {
+              new Notification("�� New Order Alert!", {
                 body: `Order from ${
                   newOrder.customer_name
                 } - ₦${newOrder.total_amount.toLocaleString()}`,

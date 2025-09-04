@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import Typography from "@/components/ui/typography";
 import NotificationItem from "./NotificationItem";
 import NotificationItemSkeleton from "./NotificationItemSkeleton";
-import { fetchNotifications } from "@/data/notifications";
+import { fetchNotifications, markNotificationAsRead, markAllNotificationsAsRead } from "@/actions/notification-actions";
 
 export default function NotificationContent() {
   const supabase = createClient();
@@ -20,9 +20,18 @@ export default function NotificationContent() {
     refetch,
   } = useQuery({
     queryKey: ["notifications"],
-    queryFn: fetchNotifications,
-    refetchInterval: 30000, // Refetch every 30 seconds as fallback
+    queryFn: () => fetchNotifications({ limit: 20, unreadOnly: false }),
+    refetchInterval: 15000, // Refetch every 15 seconds as fallback
   });
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllNotificationsAsRead();
+      refetch();
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+    }
+  };
 
   useEffect(() => {
     // Subscribe to realtime changes for new orders
@@ -102,6 +111,19 @@ export default function NotificationContent() {
       .on(
         "postgres_changes",
         {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+        },
+        (payload) => {
+          console.log("Notification change:", payload);
+          // Refetch notifications when notifications change
+          refetch();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
           event: "UPDATE",
           schema: "public",
           table: "orders",
@@ -138,12 +160,31 @@ export default function NotificationContent() {
   }
 
   if (notifications.length > 0) {
-    return notifications.map((notification, index) => (
-      <NotificationItem
-        key={`notification-${index}`}
-        notification={notification}
-      />
-    ));
+    return (
+      <>
+        {/* Header with actions */}
+        <div className="sticky top-0 bg-background border-b px-4 py-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium">Notifications</h3>
+            <button
+              onClick={handleMarkAllAsRead}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Mark all as read
+            </button>
+          </div>
+        </div>
+        
+        {/* Notification list */}
+        {notifications.map((notification, index) => (
+          <NotificationItem
+            key={`notification-${index}`}
+            notification={notification}
+            onMarkAsRead={() => refetch()}
+          />
+        ))}
+      </>
+    );
   }
 
   return (

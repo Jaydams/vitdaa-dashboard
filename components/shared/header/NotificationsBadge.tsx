@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 
 import { cn } from "@/lib/utils";
 import Typography from "@/components/ui/typography";
-import { fetchNotifications } from "@/data/notifications";
+import { getUnreadNotificationCount } from "@/actions/notification-actions";
 
 const NotificationsBadge = () => {
   const supabase = createClient();
@@ -17,16 +17,27 @@ const NotificationsBadge = () => {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ["notifications"],
-    queryFn: fetchNotifications,
-    select: (data) => data.length,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    queryKey: ["unread-notifications"],
+    queryFn: getUnreadNotificationCount,
+    refetchInterval: 10000, // Refetch every 10 seconds for real-time updates
   });
 
   useEffect(() => {
     // Subscribe to realtime changes for badge updates
     const channel = supabase
       .channel("notification-badge")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+        },
+        () => {
+          // Refetch count when notifications change
+          refetch();
+        }
+      )
       .on(
         "postgres_changes",
         {

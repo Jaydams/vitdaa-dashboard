@@ -120,10 +120,10 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
       throw new Error("Unauthorized");
     }
 
-    // First, get the current order to check if it has a table
+    // First, get the current order to check if it has a table and get order details
     const { data: currentOrder, error: fetchError } = await supabase
       .from("orders")
-      .select("table_id, dining_option")
+      .select("table_id, dining_option, invoice_no, customer_name, status")
       .eq("id", orderId)
       .eq("business_id", businessOwnerId)
       .single();
@@ -132,6 +132,8 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
       console.error("Error fetching order:", fetchError);
       throw new Error("Failed to fetch order");
     }
+
+    const previousStatus = currentOrder.status;
 
     // Update order status
     const { error } = await supabase
@@ -146,6 +148,21 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
     if (error) {
       console.error("Error updating order status:", error);
       throw new Error("Failed to update order status");
+    }
+
+    // Create notification for order status change
+    try {
+      const { createOrderStatusChangeNotification } = await import("./notification-actions");
+      await createOrderStatusChangeNotification({
+        order_id: orderId,
+        invoice_no: currentOrder.invoice_no,
+        previous_status: previousStatus,
+        new_status: status,
+        customer_name: currentOrder.customer_name,
+      });
+    } catch (notificationError) {
+      console.error("Error creating status change notification:", notificationError);
+      // Don't fail the order update if notification creation fails
     }
 
     // Update table status if indoor dining and order is completed/cancelled
