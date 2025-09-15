@@ -77,6 +77,8 @@ export default async function SettingsPage() {
         <AdminPinModal hasAdminPin={hasAdminPin} />
       </div>
 
+      <SettingsForm defaultValues={defaultValues} />
+
       {/* Settings Overview Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
