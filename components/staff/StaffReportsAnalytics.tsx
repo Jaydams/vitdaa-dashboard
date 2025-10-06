@@ -197,7 +197,7 @@ export default function StaffReportsAnalytics({
   const handlePeriodChange = (period: string) => {
     setReportPeriod(period);
     const today = new Date();
-    let start = new Date();
+    const start = new Date();
 
     switch (period) {
       case "last_week":

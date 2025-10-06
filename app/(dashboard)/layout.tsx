@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
-import isAuth from "@/helpers/isAuth";
 import Header from "@/components/shared/header";
 import Container from "@/components/ui/container";
 import AppSidebar from "@/components/shared/AppSidebar";
@@ -14,19 +13,16 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Check if the user is authenticated by calling the isAuth function.
-  // const session = await isAuth();
-
-  // // If the user is not authenticated (no session), redirect them to the login page.
-  // if (!session) {
-  //   return redirect("/login");
-  // }
-
   const cookieStore = await cookies();
   const defaultOpen = cookieStore.get("sidebar_state")?.value === "true";
 
-  // Get business ID for notifications
+  // Get business ID for notifications and validate authentication/authorization
   const businessId = await getServerBusinessOwnerId();
+
+  // If no business ID, user is not authenticated or not a business owner
+  if (!businessId) {
+    return redirect("/login");
+  }
 
   return (
     <SidebarProvider defaultOpen={defaultOpen}>

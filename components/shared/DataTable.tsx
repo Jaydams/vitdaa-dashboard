@@ -34,8 +34,8 @@ export default function DataTable<TData>({
   pagination,
 }: DataTableProps<TData>) {
   const paginationButtons = getPaginationButtons({
-    totalPages: pagination.pages,
-    currentPage: pagination.current,
+    totalPages: pagination.pages || 0,
+    currentPage: pagination.current || 1,
   });
 
   return (
@@ -96,9 +96,16 @@ export default function DataTable<TData>({
       <div className="flex flex-col md:flex-row items-center justify-between gap-3.5 p-4 bg-popover text-muted-foreground">
         <Typography className="text-sm flex-shrink-0 uppercase font-medium">
           Showing{" "}
-          {Math.max((pagination.current - 1) * pagination.perPage + 1, 1)} to{" "}
-          {Math.min(pagination.current * pagination.perPage, pagination.items)}{" "}
-          of {pagination.items}
+          {Math.max(
+            ((pagination.current || 1) - 1) * (pagination.perPage || 10) + 1,
+            1
+          )}{" "}
+          to{" "}
+          {Math.min(
+            (pagination.current || 1) * (pagination.perPage || 10),
+            pagination.items || 0
+          )}{" "}
+          of {pagination.items || 0}
         </Typography>
 
         <Pagination>

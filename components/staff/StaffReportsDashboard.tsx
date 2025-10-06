@@ -88,7 +88,7 @@ export default function StaffReportsDashboard({
 
   const getDateRange = (range: string) => {
     const today = new Date();
-    let startDate = new Date();
+    const startDate = new Date();
 
     switch (range) {
       case "last_week":

@@ -475,7 +475,7 @@ export async function updateAttendanceRecord(
       .eq("business_id", businessId)
       .single();
 
-    let updateData: any = { ...updates, updated_at: new Date().toISOString() };
+    const updateData: any = { ...updates, updated_at: new Date().toISOString() };
 
     // Recalculate hours if times are being updated
     if ((updates.clock_in_time || updates.clock_out_time) && currentRecord) {

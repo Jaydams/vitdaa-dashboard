@@ -17,15 +17,9 @@ export default function RecentOrders({ perPage = 10 }: Props) {
   const ordersPage = searchParams.get("page");
   const status = searchParams.get("status");
   const search = searchParams.get("search");
-  const page = Math.trunc(Number(ordersPage)) || 1;
+  const page = Math.max(Math.trunc(Number(ordersPage)) || 1, 1);
 
-  const {
-    orders,
-    pagination,
-    loading,
-    error,
-    refresh,
-  } = useOrdersRealtime({
+  const { orders, pagination, loading, error, refresh } = useOrdersRealtime({
     page,
     perPage,
     status: status || undefined,
@@ -44,10 +38,6 @@ export default function RecentOrders({ perPage = 10 }: Props) {
     );
 
   return (
-    <OrdersTable
-      columns={columns}
-      data={orders}
-      pagination={pagination}
-    />
+    <OrdersTable columns={columns} data={orders} pagination={pagination} />
   );
 }

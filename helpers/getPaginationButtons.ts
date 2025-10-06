@@ -14,9 +14,18 @@ interface Props {
 export const getPaginationButtons = ({ totalPages, currentPage }: Props) => {
   const paginationButtons: (number | "...")[] = [];
 
+  // Safety checks for invalid values
+  const safeTotalPages = Math.max(totalPages || 0, 0);
+  const safeCurrentPage = Math.max(currentPage || 1, 1);
+
+  // If no pages, return empty array
+  if (safeTotalPages === 0) {
+    return paginationButtons;
+  }
+
   // Total pages less than 8 pages
-  if (totalPages < 8) {
-    for (let i = 1; i <= totalPages; i++) {
+  if (safeTotalPages < 8) {
+    for (let i = 1; i <= safeTotalPages; i++) {
       paginationButtons.push(i);
     }
 
@@ -24,23 +33,23 @@ export const getPaginationButtons = ({ totalPages, currentPage }: Props) => {
   }
 
   // Current page in first 5 pages
-  if (currentPage < 5) {
+  if (safeCurrentPage < 5) {
     for (let i = 1; i < 6; i++) {
       paginationButtons.push(i);
     }
 
     paginationButtons.push("...");
-    paginationButtons.push(totalPages);
+    paginationButtons.push(safeTotalPages);
 
     return paginationButtons;
   }
 
   // Current page in last five pages
-  if (totalPages - currentPage < 4) {
+  if (safeTotalPages - safeCurrentPage < 4) {
     paginationButtons.push(1);
     paginationButtons.push("...");
 
-    for (let i = totalPages - 4; i <= totalPages; i++) {
+    for (let i = safeTotalPages - 4; i <= safeTotalPages; i++) {
       paginationButtons.push(i);
     }
 
@@ -51,12 +60,12 @@ export const getPaginationButtons = ({ totalPages, currentPage }: Props) => {
   paginationButtons.push(1);
   paginationButtons.push("...");
 
-  for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+  for (let i = safeCurrentPage - 1; i <= safeCurrentPage + 1; i++) {
     paginationButtons.push(i);
   }
 
   paginationButtons.push("...");
-  paginationButtons.push(totalPages);
+  paginationButtons.push(safeTotalPages);
 
   return paginationButtons;
 };
