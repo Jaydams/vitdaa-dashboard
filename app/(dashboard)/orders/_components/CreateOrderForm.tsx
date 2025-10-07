@@ -69,19 +69,28 @@ interface OrderItem {
   menu_item_price: number;
   quantity: number;
   total_price: number;
+  image_url?: string;
 }
 
 interface CreateOrderFormProps {
   onSuccess: () => void;
+  initialItems?: OrderItem[];
 }
 
-export function CreateOrderForm({ onSuccess }: CreateOrderFormProps) {
+export function CreateOrderForm({
+  onSuccess,
+  initialItems = [],
+}: CreateOrderFormProps) {
   const [loading, setLoading] = useState(false);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
-  const [deliveryLocations, setDeliveryLocations] = useState<DeliveryLocation[]>([]);
-  const [selectedItems, setSelectedItems] = useState<OrderItem[]>([]);
-  const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
+  const [deliveryLocations, setDeliveryLocations] = useState<
+    DeliveryLocation[]
+  >([]);
+  const [selectedItems, setSelectedItems] = useState<OrderItem[]>(initialItems);
+  const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(
+    null
+  );
   const [itemQuantity, setItemQuantity] = useState(1);
 
   const supabase = createClient();
@@ -109,10 +118,17 @@ export function CreateOrderForm({ onSuccess }: CreateOrderFormProps) {
     fetchData();
   }, []);
 
+  // Update selected items when initialItems prop changes
+  useEffect(() => {
+    setSelectedItems(initialItems);
+  }, [initialItems]);
+
   const fetchData = async () => {
     try {
       // Get current business owner ID
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         toast.error("User not authenticated");
         return;
@@ -205,7 +221,8 @@ export function CreateOrderForm({ onSuccess }: CreateOrderFormProps) {
             ? {
                 ...item,
                 quantity: item.quantity + itemQuantity,
-                total_price: (item.quantity + itemQuantity) * item.menu_item_price,
+                total_price:
+                  (item.quantity + itemQuantity) * item.menu_item_price,
               }
             : item
         )
@@ -219,6 +236,7 @@ export function CreateOrderForm({ onSuccess }: CreateOrderFormProps) {
           menu_item_price: selectedMenuItem.price,
           quantity: itemQuantity,
           total_price: selectedMenuItem.price * itemQuantity,
+          image_url: selectedMenuItem.image_url,
         },
       ]);
     }
@@ -228,7 +246,9 @@ export function CreateOrderForm({ onSuccess }: CreateOrderFormProps) {
   };
 
   const removeItemFromOrder = (menuItemId: number) => {
-    setSelectedItems(selectedItems.filter((item) => item.menu_item_id !== menuItemId));
+    setSelectedItems(
+      selectedItems.filter((item) => item.menu_item_id !== menuItemId)
+    );
   };
 
   const updateItemQuantity = (menuItemId: number, newQuantity: number) => {
@@ -251,10 +271,14 @@ export function CreateOrderForm({ onSuccess }: CreateOrderFormProps) {
   };
 
   const calculateTotals = () => {
-    const subtotal = selectedItems.reduce((sum, item) => sum + item.total_price, 0);
+    const subtotal = selectedItems.reduce(
+      (sum, item) => sum + item.total_price,
+      0
+    );
     const vat = Math.round(subtotal * 0.075);
     const serviceCharge = Math.round(subtotal * 0.025);
-    const takeawayTotal = watch("takeaway_packs") * watch("takeaway_pack_price");
+    const takeawayTotal =
+      watch("takeaway_packs") * watch("takeaway_pack_price");
     const deliveryFee = watch("delivery_fee");
     const total = subtotal + vat + serviceCharge + takeawayTotal + deliveryFee;
 
@@ -269,7 +293,14 @@ export function CreateOrderForm({ onSuccess }: CreateOrderFormProps) {
 
     setLoading(true);
     try {
-      const { subtotal, vat, serviceCharge, takeawayTotal, deliveryFee, total } = calculateTotals();
+      const {
+        subtotal,
+        vat,
+        serviceCharge,
+        takeawayTotal,
+        deliveryFee,
+        total,
+      } = calculateTotals();
 
       const orderData = {
         ...data,
@@ -294,7 +325,8 @@ export function CreateOrderForm({ onSuccess }: CreateOrderFormProps) {
     }
   };
 
-  const { subtotal, vat, serviceCharge, takeawayTotal, deliveryFee, total } = calculateTotals();
+  const { subtotal, vat, serviceCharge, takeawayTotal, deliveryFee, total } =
+    calculateTotals();
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -313,7 +345,9 @@ export function CreateOrderForm({ onSuccess }: CreateOrderFormProps) {
                 placeholder="Enter customer name"
               />
               {errors.customer_name && (
-                <p className="text-sm text-red-500">{errors.customer_name.message}</p>
+                <p className="text-sm text-red-500">
+                  {errors.customer_name.message}
+                </p>
               )}
             </div>
 
@@ -325,7 +359,9 @@ export function CreateOrderForm({ onSuccess }: CreateOrderFormProps) {
                 placeholder="Enter phone number"
               />
               {errors.customer_phone && (
-                <p className="text-sm text-red-500">{errors.customer_phone.message}</p>
+                <p className="text-sm text-red-500">
+                  {errors.customer_phone.message}
+                </p>
               )}
             </div>
 
@@ -350,7 +386,9 @@ export function CreateOrderForm({ onSuccess }: CreateOrderFormProps) {
               <Label htmlFor="dining_option">Dining Option *</Label>
               <Select
                 value={diningOption}
-                onValueChange={(value) => setValue("dining_option", value as "indoor" | "delivery")}
+                onValueChange={(value) =>
+                  setValue("dining_option", value as "indoor" | "delivery")
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -383,8 +421,14 @@ export function CreateOrderForm({ onSuccess }: CreateOrderFormProps) {
             {diningOption === "delivery" && (
               <>
                 <div>
-                  <Label htmlFor="delivery_location_id">Delivery Location</Label>
-                  <Select onValueChange={(value) => setValue("delivery_location_id", value)}>
+                  <Label htmlFor="delivery_location_id">
+                    Delivery Location
+                  </Label>
+                  <Select
+                    onValueChange={(value) =>
+                      setValue("delivery_location_id", value)
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Choose delivery location" />
                     </SelectTrigger>
@@ -422,7 +466,12 @@ export function CreateOrderForm({ onSuccess }: CreateOrderFormProps) {
             <div>
               <Label htmlFor="payment_method">Payment Method *</Label>
               <Select
-                onValueChange={(value) => setValue("payment_method", value as "cash" | "wallet" | "card")}
+                onValueChange={(value) =>
+                  setValue(
+                    "payment_method",
+                    value as "cash" | "wallet" | "card"
+                  )
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose payment method" />
@@ -450,7 +499,9 @@ export function CreateOrderForm({ onSuccess }: CreateOrderFormProps) {
               <Select
                 value={selectedMenuItem?.id.toString() || ""}
                 onValueChange={(value) => {
-                  const item = menuItems.find((item) => item.id.toString() === value);
+                  const item = menuItems.find(
+                    (item) => item.id.toString() === value
+                  );
                   setSelectedMenuItem(item || null);
                 }}
               >
@@ -510,7 +561,12 @@ export function CreateOrderForm({ onSuccess }: CreateOrderFormProps) {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => updateItemQuantity(item.menu_item_id, item.quantity - 1)}
+                        onClick={() =>
+                          updateItemQuantity(
+                            item.menu_item_id,
+                            item.quantity - 1
+                          )
+                        }
                       >
                         <Minus className="size-4" />
                       </Button>
@@ -519,7 +575,12 @@ export function CreateOrderForm({ onSuccess }: CreateOrderFormProps) {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => updateItemQuantity(item.menu_item_id, item.quantity + 1)}
+                        onClick={() =>
+                          updateItemQuantity(
+                            item.menu_item_id,
+                            item.quantity + 1
+                          )
+                        }
                       >
                         <Plus className="size-4" />
                       </Button>
@@ -637,4 +698,4 @@ export function CreateOrderForm({ onSuccess }: CreateOrderFormProps) {
       </div>
     </form>
   );
-} 
+}

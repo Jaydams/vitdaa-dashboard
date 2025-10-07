@@ -41,7 +41,7 @@ export default function MenuActions() {
     if (result.success) {
       console.log("New menu item added successfully!");
       setIsAddSheetOpen(false); // Close the sheet on successful addition
-      queryClient.invalidateQueries(["menuItems"]); // Invalidate the menu items query to refetch table data
+      queryClient.invalidateQueries({ queryKey: ["menuItems"] }); // Invalidate the menu items query to refetch grid data
     } else {
       console.error("Failed to add new menu item:", result.error);
       // TODO: Implement user-facing error message display for adding failure

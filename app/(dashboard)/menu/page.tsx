@@ -2,11 +2,11 @@ import { Metadata } from "next";
 
 // Assuming these are correctly aliased in your tsconfig.json
 import PageTitle from "@/components/shared/PageTitle";
-import AllMenu from "./_components/menus-table";
 import MenuActions from "./_components/MenuActions";
 import MenuFilters from "./_components/MenuFilters";
 import { fetchMenu } from "@/data/menu";
 import { getServerBusinessOwnerId } from "@/lib/getServerBusinessOwnerId";
+import { MenuGridWithOrder } from "./_components/MenuGridWithOrder";
 
 // Import your new server action
 
@@ -14,7 +14,11 @@ export const metadata: Metadata = {
   title: "Menu",
 };
 
-export default async function MenuPage() {
+interface MenuPageProps {
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
+export default async function MenuPage({ searchParams }: MenuPageProps) {
   // Get ownerId from business owner session (server-side)
   const ownerId = await getServerBusinessOwnerId();
   if (!ownerId) {
@@ -22,12 +26,19 @@ export default async function MenuPage() {
       "No business owner session found. Please sign in as a business owner."
     );
   }
-  // Fetch initial data using the server action, filtered by ownerId
+
+  // Extract search parameters
+  const page = Number(searchParams.page) || 1;
+  const search =
+    typeof searchParams.search === "string" ? searchParams.search : undefined;
+
+  // Fetch initial data using the server action, filtered by ownerId and search
   const { data: menuItems, ...pagination } = await fetchMenu({
-    page: 1,
+    page,
     perPage: 10,
     ownerId,
-  }); // Default to page 1
+    search,
+  });
 
   return (
     <section>
@@ -37,8 +48,8 @@ export default async function MenuPage() {
       <MenuActions />
       <MenuFilters />
 
-      {/* Pass the fetched data and pagination info to the client component */}
-      <AllMenu
+      {/* New grid layout with integrated order functionality */}
+      <MenuGridWithOrder
         initialData={menuItems}
         initialPagination={pagination}
         ownerId={ownerId}

@@ -14,8 +14,8 @@ CREATE TABLE public.admin_sessions (
   ip_address inet,
   user_agent text,
   CONSTRAINT admin_sessions_pkey PRIMARY KEY (id),
-  CONSTRAINT admin_sessions_business_owner_id_fkey FOREIGN KEY (business_owner_id) REFERENCES public.business_owner(id),
-  CONSTRAINT admin_sessions_admin_id_fkey FOREIGN KEY (admin_id) REFERENCES auth.users(id)
+  CONSTRAINT admin_sessions_admin_id_fkey FOREIGN KEY (admin_id) REFERENCES auth.users(id),
+  CONSTRAINT admin_sessions_business_owner_id_fkey FOREIGN KEY (business_owner_id) REFERENCES public.business_owner(id)
 );
 CREATE TABLE public.audit_logs (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -95,9 +95,9 @@ CREATE TABLE public.business_wallet_transactions (
   metadata jsonb DEFAULT '{}'::jsonb,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT business_wallet_transactions_pkey PRIMARY KEY (id),
-  CONSTRAINT business_wallet_transactions_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT business_wallet_transactions_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
   CONSTRAINT business_wallet_transactions_business_wallet_id_fkey FOREIGN KEY (business_wallet_id) REFERENCES public.business_wallets(id),
-  CONSTRAINT business_wallet_transactions_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
+  CONSTRAINT business_wallet_transactions_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
 );
 CREATE TABLE public.business_wallets (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -133,9 +133,9 @@ CREATE TABLE public.cart (
   rider_name text,
   rider_phone text,
   CONSTRAINT cart_pkey PRIMARY KEY (id),
-  CONSTRAINT cart_table_id_fkey FOREIGN KEY (table_id) REFERENCES public.tables(id),
   CONSTRAINT cart_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.personal_users(id),
-  CONSTRAINT cart_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.business_owner(id)
+  CONSTRAINT cart_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.business_owner(id),
+  CONSTRAINT cart_table_id_fkey FOREIGN KEY (table_id) REFERENCES public.tables(id)
 );
 CREATE TABLE public.comments (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -179,8 +179,8 @@ CREATE TABLE public.inventory_adjustment_items (
   notes text,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT inventory_adjustment_items_pkey PRIMARY KEY (id),
-  CONSTRAINT inventory_adjustment_items_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.inventory_items(id),
-  CONSTRAINT inventory_adjustment_items_adjustment_id_fkey FOREIGN KEY (adjustment_id) REFERENCES public.inventory_adjustments(id)
+  CONSTRAINT inventory_adjustment_items_adjustment_id_fkey FOREIGN KEY (adjustment_id) REFERENCES public.inventory_adjustments(id),
+  CONSTRAINT inventory_adjustment_items_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.inventory_items(id)
 );
 CREATE TABLE public.inventory_adjustments (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -193,8 +193,8 @@ CREATE TABLE public.inventory_adjustments (
   created_by uuid NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT inventory_adjustments_pkey PRIMARY KEY (id),
-  CONSTRAINT inventory_adjustments_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.staff(id),
-  CONSTRAINT inventory_adjustments_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
+  CONSTRAINT inventory_adjustments_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
+  CONSTRAINT inventory_adjustments_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.staff(id)
 );
 CREATE TABLE public.inventory_alerts (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -208,9 +208,9 @@ CREATE TABLE public.inventory_alerts (
   resolved_at timestamp with time zone,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT inventory_alerts_pkey PRIMARY KEY (id),
+  CONSTRAINT inventory_alerts_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
   CONSTRAINT inventory_alerts_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.inventory_items(id),
-  CONSTRAINT inventory_alerts_resolved_by_fkey FOREIGN KEY (resolved_by) REFERENCES public.staff(id),
-  CONSTRAINT inventory_alerts_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
+  CONSTRAINT inventory_alerts_resolved_by_fkey FOREIGN KEY (resolved_by) REFERENCES public.staff(id)
 );
 CREATE TABLE public.inventory_categories (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -239,9 +239,9 @@ CREATE TABLE public.inventory_count_items (
   counted_at timestamp with time zone DEFAULT now(),
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT inventory_count_items_pkey PRIMARY KEY (id),
+  CONSTRAINT inventory_count_items_count_session_id_fkey FOREIGN KEY (count_session_id) REFERENCES public.inventory_count_sessions(id),
   CONSTRAINT inventory_count_items_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.inventory_items(id),
-  CONSTRAINT inventory_count_items_counted_by_fkey FOREIGN KEY (counted_by) REFERENCES public.staff(id),
-  CONSTRAINT inventory_count_items_count_session_id_fkey FOREIGN KEY (count_session_id) REFERENCES public.inventory_count_sessions(id)
+  CONSTRAINT inventory_count_items_counted_by_fkey FOREIGN KEY (counted_by) REFERENCES public.staff(id)
 );
 CREATE TABLE public.inventory_count_sessions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -256,8 +256,8 @@ CREATE TABLE public.inventory_count_sessions (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT inventory_count_sessions_pkey PRIMARY KEY (id),
-  CONSTRAINT inventory_count_sessions_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.staff(id),
-  CONSTRAINT inventory_count_sessions_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
+  CONSTRAINT inventory_count_sessions_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
+  CONSTRAINT inventory_count_sessions_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.staff(id)
 );
 CREATE TABLE public.inventory_items (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -301,8 +301,8 @@ CREATE TABLE public.inventory_reports (
   generated_by uuid NOT NULL,
   generated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT inventory_reports_pkey PRIMARY KEY (id),
-  CONSTRAINT inventory_reports_generated_by_fkey FOREIGN KEY (generated_by) REFERENCES public.staff(id),
-  CONSTRAINT inventory_reports_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
+  CONSTRAINT inventory_reports_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
+  CONSTRAINT inventory_reports_generated_by_fkey FOREIGN KEY (generated_by) REFERENCES public.staff(id)
 );
 CREATE TABLE public.inventory_transactions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -322,11 +322,11 @@ CREATE TABLE public.inventory_transactions (
   transaction_date timestamp with time zone DEFAULT now(),
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT inventory_transactions_pkey PRIMARY KEY (id),
-  CONSTRAINT inventory_transactions_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
+  CONSTRAINT inventory_transactions_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
+  CONSTRAINT inventory_transactions_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.inventory_items(id),
   CONSTRAINT inventory_transactions_supplier_id_fkey FOREIGN KEY (supplier_id) REFERENCES public.suppliers(id),
   CONSTRAINT inventory_transactions_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
-  CONSTRAINT inventory_transactions_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
-  CONSTRAINT inventory_transactions_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.inventory_items(id)
+  CONSTRAINT inventory_transactions_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id)
 );
 CREATE TABLE public.likes (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -334,8 +334,8 @@ CREATE TABLE public.likes (
   user_id uuid NOT NULL,
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT likes_pkey PRIMARY KEY (id),
-  CONSTRAINT likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
-  CONSTRAINT likes_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id)
+  CONSTRAINT likes_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id),
+  CONSTRAINT likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.menu (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -356,8 +356,8 @@ CREATE TABLE public.menu_item_ingredients (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT menu_item_ingredients_pkey PRIMARY KEY (id),
-  CONSTRAINT menu_item_ingredients_inventory_item_id_fkey FOREIGN KEY (inventory_item_id) REFERENCES public.inventory_items(id),
-  CONSTRAINT menu_item_ingredients_menu_item_id_fkey FOREIGN KEY (menu_item_id) REFERENCES public.menu_items(id)
+  CONSTRAINT menu_item_ingredients_menu_item_id_fkey FOREIGN KEY (menu_item_id) REFERENCES public.menu_items(id),
+  CONSTRAINT menu_item_ingredients_inventory_item_id_fkey FOREIGN KEY (inventory_item_id) REFERENCES public.inventory_items(id)
 );
 CREATE TABLE public.menu_items (
   id integer NOT NULL DEFAULT nextval('menu_items_id_seq'::regclass),
@@ -372,6 +372,39 @@ CREATE TABLE public.menu_items (
   CONSTRAINT menu_items_pkey PRIMARY KEY (id),
   CONSTRAINT menu_items_menu_id_fkey FOREIGN KEY (menu_id) REFERENCES public.menu(id)
 );
+CREATE TABLE public.notifications (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  business_id uuid NOT NULL,
+  user_id uuid,
+  staff_id uuid,
+  type text NOT NULL CHECK (type = ANY (ARRAY['new_order'::text, 'order_status_change'::text, 'low_stock'::text, 'payment_received'::text, 'system_alert'::text])),
+  title text NOT NULL,
+  message text NOT NULL,
+  data jsonb DEFAULT '{}'::jsonb,
+  is_read boolean DEFAULT false,
+  is_archived boolean DEFAULT false,
+  priority text DEFAULT 'normal'::text CHECK (priority = ANY (ARRAY['low'::text, 'normal'::text, 'high'::text, 'urgent'::text])),
+  expires_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT notifications_pkey PRIMARY KEY (id),
+  CONSTRAINT notifications_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
+  CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT notifications_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id)
+);
+CREATE TABLE public.order_assignments (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  order_id uuid NOT NULL,
+  staff_id uuid NOT NULL,
+  assignment_type text NOT NULL CHECK (assignment_type = ANY (ARRAY['kitchen'::text, 'bar'::text, 'service'::text, 'delivery'::text])),
+  assigned_at timestamp with time zone DEFAULT now(),
+  unassigned_at timestamp with time zone,
+  is_active boolean DEFAULT true,
+  notes text,
+  CONSTRAINT order_assignments_pkey PRIMARY KEY (id),
+  CONSTRAINT order_assignments_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT order_assignments_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id)
+);
 CREATE TABLE public.order_items (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   order_id uuid NOT NULL,
@@ -381,9 +414,29 @@ CREATE TABLE public.order_items (
   quantity integer NOT NULL,
   total_price integer NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
+  item_status text DEFAULT 'pending'::text CHECK (item_status = ANY (ARRAY['pending'::text, 'preparing'::text, 'ready'::text, 'served'::text, 'cancelled'::text])),
+  assigned_to_staff_id uuid,
+  preparation_started_at timestamp with time zone,
+  preparation_completed_at timestamp with time zone,
+  special_instructions text,
+  is_kitchen_item boolean DEFAULT true,
+  is_bar_item boolean DEFAULT false,
   CONSTRAINT order_items_pkey PRIMARY KEY (id),
   CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
-  CONSTRAINT order_items_menu_item_id_fkey FOREIGN KEY (menu_item_id) REFERENCES public.menu_items(id)
+  CONSTRAINT order_items_menu_item_id_fkey FOREIGN KEY (menu_item_id) REFERENCES public.menu_items(id),
+  CONSTRAINT order_items_assigned_to_staff_id_fkey FOREIGN KEY (assigned_to_staff_id) REFERENCES public.staff(id)
+);
+CREATE TABLE public.order_status_history (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  order_id uuid NOT NULL,
+  staff_id uuid,
+  previous_status text,
+  new_status text NOT NULL,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT order_status_history_pkey PRIMARY KEY (id),
+  CONSTRAINT order_status_history_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT order_status_history_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id)
 );
 CREATE TABLE public.orders (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -406,7 +459,7 @@ CREATE TABLE public.orders (
   vat_amount integer NOT NULL,
   service_charge integer NOT NULL,
   total_amount integer NOT NULL,
-  payment_method text NOT NULL CHECK (payment_method = ANY (ARRAY['cash'::text, 'wallet'::text, 'card'::text])),
+  payment_method text NOT NULL CHECK (payment_method = ANY (ARRAY['cash'::text, 'wallet'::text, 'card'::text, 'transfer'::text])),
   status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'processing'::text, 'delivered'::text, 'cancelled'::text])),
   notes text,
   created_at timestamp with time zone DEFAULT now(),
@@ -415,17 +468,30 @@ CREATE TABLE public.orders (
   wallet_payment_status text DEFAULT 'pending'::text CHECK (wallet_payment_status = ANY (ARRAY['pending'::text, 'completed'::text, 'failed'::text, 'cancelled'::text])),
   service_charge_amount integer DEFAULT 0,
   squadco_payment_reference character varying UNIQUE,
+  assigned_to_staff_id uuid,
+  assigned_at timestamp with time zone,
+  kitchen_notes text,
+  bar_notes text,
+  estimated_completion_time timestamp with time zone,
+  priority_level text DEFAULT 'normal'::text CHECK (priority_level = ANY (ARRAY['low'::text, 'normal'::text, 'high'::text, 'urgent'::text])),
+  preparation_started_at timestamp with time zone,
+  preparation_completed_at timestamp with time zone,
+  ready_for_pickup_at timestamp with time zone,
+  last_status_update timestamp with time zone DEFAULT now(),
+  status_updated_by uuid,
   CONSTRAINT orders_pkey PRIMARY KEY (id),
-  CONSTRAINT orders_delivery_location_id_fkey FOREIGN KEY (delivery_location_id) REFERENCES public.delivery_locations(id),
-  CONSTRAINT orders_table_id_fkey FOREIGN KEY (table_id) REFERENCES public.tables(id),
+  CONSTRAINT orders_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
   CONSTRAINT orders_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id),
-  CONSTRAINT orders_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
+  CONSTRAINT orders_table_id_fkey FOREIGN KEY (table_id) REFERENCES public.tables(id),
+  CONSTRAINT orders_delivery_location_id_fkey FOREIGN KEY (delivery_location_id) REFERENCES public.delivery_locations(id),
+  CONSTRAINT orders_assigned_to_staff_id_fkey FOREIGN KEY (assigned_to_staff_id) REFERENCES public.staff(id),
+  CONSTRAINT orders_status_updated_by_fkey FOREIGN KEY (status_updated_by) REFERENCES public.staff(id)
 );
 CREATE TABLE public.payments (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   order_id uuid NOT NULL,
   amount integer NOT NULL,
-  payment_method text NOT NULL,
+  payment_method text NOT NULL CHECK (payment_method = ANY (ARRAY['cash'::text, 'wallet'::text, 'card'::text, 'transfer'::text, 'direct_debit'::text])),
   transaction_id text,
   status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'completed'::text, 'failed'::text, 'refunded'::text])),
   payment_time timestamp with time zone DEFAULT now(),
@@ -520,8 +586,8 @@ CREATE TABLE public.purchase_order_items (
   notes text,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT purchase_order_items_pkey PRIMARY KEY (id),
-  CONSTRAINT purchase_order_items_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.inventory_items(id),
-  CONSTRAINT purchase_order_items_purchase_order_id_fkey FOREIGN KEY (purchase_order_id) REFERENCES public.purchase_orders(id)
+  CONSTRAINT purchase_order_items_purchase_order_id_fkey FOREIGN KEY (purchase_order_id) REFERENCES public.purchase_orders(id),
+  CONSTRAINT purchase_order_items_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.inventory_items(id)
 );
 CREATE TABLE public.purchase_orders (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -750,8 +816,8 @@ CREATE TABLE public.security_audit_logs (
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT security_audit_logs_pkey PRIMARY KEY (id),
   CONSTRAINT security_audit_logs_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
-  CONSTRAINT security_audit_logs_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
-  CONSTRAINT security_audit_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.business_owner(id)
+  CONSTRAINT security_audit_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.business_owner(id),
+  CONSTRAINT security_audit_logs_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id)
 );
 CREATE TABLE public.squadco_business_accounts (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -799,8 +865,8 @@ CREATE TABLE public.squadco_direct_debit_mandates (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT squadco_direct_debit_mandates_pkey PRIMARY KEY (id),
-  CONSTRAINT squadco_direct_debit_mandates_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
-  CONSTRAINT squadco_direct_debit_mandates_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.personal_users(id)
+  CONSTRAINT squadco_direct_debit_mandates_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.personal_users(id),
+  CONSTRAINT squadco_direct_debit_mandates_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
 );
 CREATE TABLE public.squadco_transactions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -825,10 +891,10 @@ CREATE TABLE public.squadco_transactions (
   payment_id uuid,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT squadco_transactions_pkey PRIMARY KEY (id),
-  CONSTRAINT squadco_transactions_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
-  CONSTRAINT squadco_transactions_payment_id_fkey FOREIGN KEY (payment_id) REFERENCES public.payments(id),
+  CONSTRAINT squadco_transactions_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
   CONSTRAINT squadco_transactions_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.personal_users(id),
-  CONSTRAINT squadco_transactions_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
+  CONSTRAINT squadco_transactions_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT squadco_transactions_payment_id_fkey FOREIGN KEY (payment_id) REFERENCES public.payments(id)
 );
 CREATE TABLE public.squadco_webhook_logs (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -893,8 +959,8 @@ CREATE TABLE public.staff_access_logs (
   user_agent text,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT staff_access_logs_pkey PRIMARY KEY (id),
-  CONSTRAINT staff_access_logs_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
   CONSTRAINT staff_access_logs_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
+  CONSTRAINT staff_access_logs_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
   CONSTRAINT staff_access_logs_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.staff_sessions(id)
 );
 CREATE TABLE public.staff_activity_logs (
@@ -909,10 +975,10 @@ CREATE TABLE public.staff_activity_logs (
   user_agent text,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT staff_activity_logs_pkey PRIMARY KEY (id),
-  CONSTRAINT staff_activity_logs_performed_by_fkey FOREIGN KEY (performed_by) REFERENCES auth.users(id),
-  CONSTRAINT staff_activity_logs_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.staff_sessions(id),
+  CONSTRAINT staff_activity_logs_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
   CONSTRAINT staff_activity_logs_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
-  CONSTRAINT staff_activity_logs_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
+  CONSTRAINT staff_activity_logs_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.staff_sessions(id),
+  CONSTRAINT staff_activity_logs_performed_by_fkey FOREIGN KEY (performed_by) REFERENCES auth.users(id)
 );
 CREATE TABLE public.staff_attendance (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -929,8 +995,8 @@ CREATE TABLE public.staff_attendance (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT staff_attendance_pkey PRIMARY KEY (id),
-  CONSTRAINT staff_attendance_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
   CONSTRAINT staff_attendance_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
+  CONSTRAINT staff_attendance_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
   CONSTRAINT staff_attendance_shift_id_fkey FOREIGN KEY (shift_id) REFERENCES public.staff_shifts(id)
 );
 CREATE TABLE public.staff_documents (
@@ -948,9 +1014,9 @@ CREATE TABLE public.staff_documents (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT staff_documents_pkey PRIMARY KEY (id),
-  CONSTRAINT staff_documents_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.business_owner(id),
+  CONSTRAINT staff_documents_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
   CONSTRAINT staff_documents_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
-  CONSTRAINT staff_documents_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id)
+  CONSTRAINT staff_documents_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.business_owner(id)
 );
 CREATE TABLE public.staff_performance_reviews (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -969,9 +1035,9 @@ CREATE TABLE public.staff_performance_reviews (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT staff_performance_reviews_pkey PRIMARY KEY (id),
-  CONSTRAINT staff_performance_reviews_reviewer_id_fkey FOREIGN KEY (reviewer_id) REFERENCES public.business_owner(id),
   CONSTRAINT staff_performance_reviews_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
-  CONSTRAINT staff_performance_reviews_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
+  CONSTRAINT staff_performance_reviews_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
+  CONSTRAINT staff_performance_reviews_reviewer_id_fkey FOREIGN KEY (reviewer_id) REFERENCES public.business_owner(id)
 );
 CREATE TABLE public.staff_permissions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -986,9 +1052,9 @@ CREATE TABLE public.staff_permissions (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT staff_permissions_pkey PRIMARY KEY (id),
+  CONSTRAINT staff_permissions_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
   CONSTRAINT staff_permissions_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
-  CONSTRAINT staff_permissions_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES public.business_owner(id),
-  CONSTRAINT staff_permissions_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id)
+  CONSTRAINT staff_permissions_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES public.business_owner(id)
 );
 CREATE TABLE public.staff_role_assignments (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -1022,8 +1088,8 @@ CREATE TABLE public.staff_salary (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT staff_salary_pkey PRIMARY KEY (id),
-  CONSTRAINT staff_salary_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
-  CONSTRAINT staff_salary_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id)
+  CONSTRAINT staff_salary_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
+  CONSTRAINT staff_salary_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
 );
 CREATE TABLE public.staff_session_activity (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -1043,8 +1109,8 @@ CREATE TABLE public.staff_session_activity (
   break_time_minutes integer DEFAULT 0,
   active_time_minutes integer DEFAULT 0,
   CONSTRAINT staff_session_activity_pkey PRIMARY KEY (id),
-  CONSTRAINT staff_session_activity_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
   CONSTRAINT staff_session_activity_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.staff_sessions(id),
+  CONSTRAINT staff_session_activity_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
   CONSTRAINT staff_session_activity_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
 );
 CREATE TABLE public.staff_sessions (
@@ -1063,10 +1129,10 @@ CREATE TABLE public.staff_sessions (
   ip_address inet,
   device_info jsonb,
   CONSTRAINT staff_sessions_pkey PRIMARY KEY (id),
-  CONSTRAINT staff_sessions_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
-  CONSTRAINT staff_sessions_signed_in_by_fkey FOREIGN KEY (signed_in_by) REFERENCES public.business_owner(id),
   CONSTRAINT staff_sessions_shift_id_fkey FOREIGN KEY (shift_id) REFERENCES public.restaurant_shifts(id),
-  CONSTRAINT staff_sessions_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id)
+  CONSTRAINT staff_sessions_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
+  CONSTRAINT staff_sessions_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
+  CONSTRAINT staff_sessions_signed_in_by_fkey FOREIGN KEY (signed_in_by) REFERENCES public.business_owner(id)
 );
 CREATE TABLE public.staff_shifts (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -1083,8 +1149,8 @@ CREATE TABLE public.staff_shifts (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT staff_shifts_pkey PRIMARY KEY (id),
-  CONSTRAINT staff_shifts_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
-  CONSTRAINT staff_shifts_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id)
+  CONSTRAINT staff_shifts_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
+  CONSTRAINT staff_shifts_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
 );
 CREATE TABLE public.suppliers (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -1155,8 +1221,8 @@ CREATE TABLE public.vfd_transactions (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT vfd_transactions_pkey PRIMARY KEY (id),
-  CONSTRAINT vfd_transactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.personal_users(id),
-  CONSTRAINT vfd_transactions_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
+  CONSTRAINT vfd_transactions_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
+  CONSTRAINT vfd_transactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.personal_users(id)
 );
 CREATE TABLE public.vfd_webhooks (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -1180,8 +1246,8 @@ CREATE TABLE public.vfd_webhooks (
   processed boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT vfd_webhooks_pkey PRIMARY KEY (id),
-  CONSTRAINT vfd_webhooks_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.personal_users(id),
-  CONSTRAINT vfd_webhooks_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
+  CONSTRAINT vfd_webhooks_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
+  CONSTRAINT vfd_webhooks_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.personal_users(id)
 );
 CREATE TABLE public.wallet_transactions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

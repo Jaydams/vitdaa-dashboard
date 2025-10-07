@@ -1,48 +1,55 @@
 "use client";
 
-import { Loader2, ShieldAlert } from "lucide-react";
-import { useQuery } from "@tanstack/react-query"; // Kept useQuery in case you add client-side category fetching later
-
-// Assuming correct alias paths
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import Typography from "@/components/ui/typography";
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function MenuFilters() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Initialize search term from URL params
+  useEffect(() => {
+    const search = searchParams.get("search") || "";
+    setSearchTerm(search);
+  }, [searchParams]);
 
   /**
    * Handles the filter form submission.
-   * In a full Next.js application with server-side filtering,
-   * you would update the URL search parameters here.
-   * For example: `router.push(`/menu?page=1&search=${searchTerm}`);`
+   * Updates URL search parameters to trigger data refetch in the grid component.
    */
   const handleFilter = (e: React.FormEvent) => {
-    e.preventDefault(); // Prevent default form submission
-    console.log("Filtering by search term:", searchTerm);
-    // TODO: Implement actual filtering logic, likely by updating URL search params
-    // and letting the server component (page.tsx) re-fetch data based on them.
+    e.preventDefault();
+
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (searchTerm.trim()) {
+      params.set("search", searchTerm.trim());
+    } else {
+      params.delete("search");
+    }
+
+    // Reset to page 1 when filtering
+    params.set("page", "1");
+
+    router.push(`/menu?${params.toString()}`);
   };
 
   /**
    * Handles resetting the filter form.
-   * Clears the search term.
+   * Clears all filter parameters from URL.
    */
   const handleReset = () => {
-    setSearchTerm(""); // Clear the input field
-    console.log("Resetting filters");
-    // TODO: Implement actual reset logic, e.g., clearing URL search params
-    // and letting the server component re-fetch default data.
+    setSearchTerm("");
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("search");
+    params.set("page", "1");
+
+    router.push(`/menu?${params.toString()}`);
   };
 
   return (

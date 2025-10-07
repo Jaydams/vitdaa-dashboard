@@ -2,9 +2,11 @@ import PageTitle from "@/components/shared/PageTitle";
 import SettingsForm from "./_components/SettingsForm";
 import AdminPinModal from "./_components/AdminPinModal";
 import SettingsErrorHandler from "./_components/SettingsErrorHandler";
+import BusinessSettingsForm from "./_components/BusinessSettingsForm";
 
 import { getServerBusinessOwnerId } from "@/lib/getServerBusinessOwnerId";
 import { getBusinessOwnerSettings } from "@/data/settings";
+import { getBusinessSettings } from "@/actions/business-settings-actions";
 import { createClient } from "@/lib/supabase/server";
 import {
   Card,
@@ -13,16 +15,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Shield, Settings, Building, Image as ImageIcon } from "lucide-react";
 
 export default async function SettingsPage() {
   const businessOwnerId = await getServerBusinessOwnerId();
   let defaultValues = {};
   let hasAdminPin = false;
+  let businessSettings = null;
 
   if (businessOwnerId) {
     const settings = await getBusinessOwnerSettings(businessOwnerId);
+
+    // Get business settings for tax and service charges
+    try {
+      businessSettings = await getBusinessSettings(businessOwnerId);
+    } catch (error) {
+      console.error("Error fetching business settings:", error);
+      // businessSettings will remain null, component will use defaults
+    }
 
     // Check if admin PIN is set
     const supabase = await createClient();
@@ -76,8 +86,6 @@ export default async function SettingsPage() {
         <PageTitle>Settings</PageTitle>
         <AdminPinModal hasAdminPin={hasAdminPin} />
       </div>
-
-      <SettingsForm defaultValues={defaultValues} />
 
       {/* Settings Overview Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -143,7 +151,7 @@ export default async function SettingsPage() {
         </Card>
       </div>
 
-      {/* Business Settings Form */}
+      {/* Business Profile Settings Form */}
       <Card className="border-0 shadow-sm">
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -151,9 +159,9 @@ export default async function SettingsPage() {
               <Settings className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <CardTitle>Business Settings</CardTitle>
+              <CardTitle>Business Profile</CardTitle>
               <CardDescription>
-                Configure your restaurant's settings and preferences
+                Configure your restaurant's profile and preferences
               </CardDescription>
             </div>
           </div>
@@ -165,6 +173,14 @@ export default async function SettingsPage() {
           />
         </CardContent>
       </Card>
+
+      {/* Business Settings Form - Tax & Service Charges */}
+      {businessOwnerId && (
+        <BusinessSettingsForm
+          businessId={businessOwnerId}
+          initialSettings={businessSettings}
+        />
+      )}
     </section>
   );
 }

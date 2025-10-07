@@ -37,7 +37,8 @@ export async function fetchMenu({
   page,
   perPage = 10,
   ownerId,
-}: PaginationQueryProps & { ownerId: string }): Promise<
+  search,
+}: PaginationQueryProps & { ownerId: string; search?: string }): Promise<
   import("@/types/pagination").PaginationData<MenuItem>
 > {
   const supabase = await createClient();
@@ -45,10 +46,17 @@ export async function fetchMenu({
     const startIndex = (page - 1) * perPage;
     const endIndex = startIndex + perPage - 1;
 
-    // Join menu_items with menu to get menu_name, filter by menu.owner_id
-    const { data, count, error } = await supabase
+    // Build query with optional search filter
+    let query = supabase
       .from("menu_items")
-      .select("*, menu:menu_id(menu_name, owner_id)", { count: "exact" })
+      .select("*, menu:menu_id(menu_name, owner_id)", { count: "exact" });
+
+    // Add search filter if provided
+    if (search && search.trim()) {
+      query = query.ilike("name", `%${search.trim()}%`);
+    }
+
+    const { data, count, error } = await query
       .range(startIndex, endIndex)
       .order("created_at", { ascending: false });
 

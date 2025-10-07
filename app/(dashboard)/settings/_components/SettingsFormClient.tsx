@@ -65,7 +65,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Plus, MapPin, Package, Users, Building, Camera, Upload, Image as ImageIcon } from "lucide-react";
+import {
+  Trash2,
+  Plus,
+  MapPin,
+  Package,
+  Users,
+  Building,
+  Camera,
+  Upload,
+  Image as ImageIcon,
+} from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 
@@ -113,11 +123,10 @@ export default function SettingsFormClient({
   const onSubmit = async (data: SettingsFormData) => {
     setIsSubmitting(true);
     try {
-      await updateSettingsAction({
+      await updateSettingsAction(ownerId, {
         ...data,
         profile_image_url: profileImage || "",
         cover_image_url: coverImage || "",
-        ownerId,
       });
       toast.success("Settings updated successfully");
     } catch (error) {
@@ -141,7 +150,8 @@ export default function SettingsFormClient({
                 <div>
                   <CardTitle className="text-lg">Branding & Images</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Upload your business logo and cover images to enhance your brand
+                    Upload your business logo and cover images to enhance your
+                    brand
                   </p>
                 </div>
               </div>
@@ -166,7 +176,7 @@ export default function SettingsFormClient({
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Cover Image Upload Overlay */}
                   <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
                     <div className="bg-white/90 dark:bg-slate-900/90 rounded-lg p-4 backdrop-blur-sm">
@@ -199,7 +209,7 @@ export default function SettingsFormClient({
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Profile Image Upload Overlay */}
                     <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
                       <div className="bg-white/90 dark:bg-slate-900/90 rounded-lg p-2 backdrop-blur-sm">
@@ -216,13 +226,16 @@ export default function SettingsFormClient({
 
                 {/* Upload Instructions */}
                 <div className="absolute right-4 top-4">
-                  <Badge variant="secondary" className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm">
+                  <Badge
+                    variant="secondary"
+                    className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm"
+                  >
                     <Upload className="h-3 w-3 mr-1" />
                     Hover to upload
                   </Badge>
                 </div>
               </div>
-              
+
               {/* Spacer for profile image */}
               <div className="h-20"></div>
             </CardContent>
@@ -236,7 +249,9 @@ export default function SettingsFormClient({
                   <Building className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Business Information</CardTitle>
+                  <CardTitle className="text-lg">
+                    Business Information
+                  </CardTitle>
                   <p className="text-sm text-muted-foreground">
                     Update your business details and contact information
                   </p>
@@ -281,7 +296,9 @@ export default function SettingsFormClient({
                             type="text"
                             readOnly={hasValue}
                             value={hasValue ? "*".repeat(value.length) : value}
-                            placeholder={hasValue ? undefined : "Enter business number"}
+                            placeholder={
+                              hasValue ? undefined : "Enter business number"
+                            }
                             className="h-11"
                           />
                         </FormControl>
@@ -435,7 +452,9 @@ export default function SettingsFormClient({
             <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                  <div className="h-5 w-5 text-purple-600 dark:text-purple-400">📱</div>
+                  <div className="h-5 w-5 text-purple-600 dark:text-purple-400">
+                    📱
+                  </div>
                 </div>
                 <div>
                   <CardTitle className="text-lg">Social Media</CardTitle>
@@ -556,7 +575,8 @@ export default function SettingsFormClient({
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const current = form.getValues("delivery_locations") || [];
+                        const current =
+                          form.getValues("delivery_locations") || [];
                         form.setValue("delivery_locations", [
                           ...current,
                           { name: "", price: 0, state: "" },
@@ -569,15 +589,23 @@ export default function SettingsFormClient({
                   </div>
 
                   {form.watch("delivery_locations")?.map((_, index) => (
-                    <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg">
+                    <div
+                      key={index}
+                      className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg"
+                    >
                       <FormField
                         name={`delivery_locations.${index}.name`}
                         control={form.control}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm">Location Name</FormLabel>
+                            <FormLabel className="text-sm">
+                              Location Name
+                            </FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="Enter location name" />
+                              <Input
+                                {...field}
+                                placeholder="Enter location name"
+                              />
                             </FormControl>
                           </FormItem>
                         )}
@@ -587,13 +615,17 @@ export default function SettingsFormClient({
                         control={form.control}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm">Delivery Fee</FormLabel>
+                            <FormLabel className="text-sm">
+                              Delivery Fee
+                            </FormLabel>
                             <FormControl>
                               <Input
                                 {...field}
                                 type="number"
                                 placeholder="0"
-                                onChange={(e) => field.onChange(Number(e.target.value))}
+                                onChange={(e) =>
+                                  field.onChange(Number(e.target.value))
+                                }
                               />
                             </FormControl>
                           </FormItem>
@@ -617,7 +649,8 @@ export default function SettingsFormClient({
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const current = form.getValues("delivery_locations") || [];
+                            const current =
+                              form.getValues("delivery_locations") || [];
                             form.setValue(
                               "delivery_locations",
                               current.filter((_, i) => i !== index)
@@ -671,7 +704,10 @@ export default function SettingsFormClient({
                 </div>
 
                 {form.watch("takeaway_packs")?.map((_, index) => (
-                  <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
+                  <div
+                    key={index}
+                    className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg"
+                  >
                     <FormField
                       name={`takeaway_packs.${index}.name`}
                       control={form.control}
@@ -696,7 +732,9 @@ export default function SettingsFormClient({
                                 {...field}
                                 type="number"
                                 placeholder="0"
-                                onChange={(e) => field.onChange(Number(e.target.value))}
+                                onChange={(e) =>
+                                  field.onChange(Number(e.target.value))
+                                }
                               />
                             </FormControl>
                           </FormItem>
@@ -707,7 +745,8 @@ export default function SettingsFormClient({
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          const current = form.getValues("takeaway_packs") || [];
+                          const current =
+                            form.getValues("takeaway_packs") || [];
                           form.setValue(
                             "takeaway_packs",
                             current.filter((_, i) => i !== index)
@@ -731,7 +770,9 @@ export default function SettingsFormClient({
                   <Users className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Tables Configuration</CardTitle>
+                  <CardTitle className="text-lg">
+                    Tables Configuration
+                  </CardTitle>
                   <p className="text-sm text-muted-foreground">
                     Set the number of tables in your restaurant
                   </p>
