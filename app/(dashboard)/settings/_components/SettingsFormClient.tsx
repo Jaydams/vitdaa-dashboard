@@ -183,8 +183,14 @@ export default function SettingsFormClient({
                       <ImageDropzone
                         previewImage={coverImage}
                         onFileAccepted={(file) => {
+                          // Keep local preview for immediate feedback
                           setCoverImage(URL.createObjectURL(file));
                         }}
+                        onImageUploaded={(url) => {
+                          // Update with the actual uploaded URL
+                          setCoverImage(url);
+                        }}
+                        uploadType="cover"
                       />
                     </div>
                   </div>
@@ -216,8 +222,14 @@ export default function SettingsFormClient({
                         <ImageDropzone
                           previewImage={profileImage}
                           onFileAccepted={(file) => {
+                            // Keep local preview for immediate feedback
                             setProfileImage(URL.createObjectURL(file));
                           }}
+                          onImageUploaded={(url) => {
+                            // Update with the actual uploaded URL
+                            setProfileImage(url);
+                          }}
+                          uploadType="profile"
                         />
                       </div>
                     </div>

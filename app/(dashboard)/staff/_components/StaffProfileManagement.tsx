@@ -86,7 +86,7 @@ export default function StaffProfileManagement({
   const updateStaffMutation = useMutation({
     mutationFn: async (data: StaffProfileFormData) => {
       console.log("Submitting staff profile update:", data);
-      
+
       const response = await fetch(`/api/staff/${staffId}`, {
         method: "PUT",
         headers: {
@@ -96,7 +96,7 @@ export default function StaffProfileManagement({
       });
 
       console.log("Response status:", response.status);
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         console.error("API error:", errorData);
@@ -131,10 +131,14 @@ export default function StaffProfileManagement({
   };
 
   const handleProfileImageUpload = (file: File) => {
-    // For now, we'll just set a placeholder URL
-    // In a real implementation, you would upload the file to storage
+    // Set local preview immediately for better UX
     const imageUrl = URL.createObjectURL(file);
     form.setValue("profile_image_url", imageUrl);
+  };
+
+  const handleImageUploaded = (url: string) => {
+    // Update with the actual uploaded URL from Supabase
+    form.setValue("profile_image_url", url);
   };
 
   return (
@@ -198,6 +202,8 @@ export default function StaffProfileManagement({
                         <ImageDropzone
                           previewImage={field.value}
                           onFileAccepted={handleProfileImageUpload}
+                          onImageUploaded={handleImageUploaded}
+                          uploadType="profile"
                         />
                       </FormControl>
                       <FormMessage />

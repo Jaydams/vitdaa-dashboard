@@ -114,6 +114,20 @@ CREATE TABLE public.business_wallets (
   CONSTRAINT business_wallets_pkey PRIMARY KEY (id),
   CONSTRAINT business_wallets_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
 );
+-- Note: business_settings table already exists in production with basic structure
+-- The following represents the complete schema after migrations:
+-- CREATE TABLE public.business_settings (
+--   id uuid NOT NULL DEFAULT gen_random_uuid(),
+--   business_id uuid NOT NULL UNIQUE,
+--   vat_rate numeric(5,2) DEFAULT 7.5,
+--   service_charge_rate numeric(5,2) DEFAULT 2.5,
+--   enabled_dining_options jsonb DEFAULT '["indoor", "delivery", "pickup"]'::jsonb,
+--   default_takeaway_pack_price integer DEFAULT 100,
+--   created_at timestamp with time zone DEFAULT now(),
+--   updated_at timestamp with time zone DEFAULT now(),
+--   CONSTRAINT business_settings_pkey PRIMARY KEY (id),
+--   CONSTRAINT business_settings_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id) ON DELETE CASCADE
+-- );
 CREATE TABLE public.cart (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid,
@@ -125,7 +139,7 @@ CREATE TABLE public.cart (
   created_at timestamp without time zone DEFAULT now(),
   updated_at timestamp without time zone DEFAULT now(),
   total smallint,
-  dining_option text CHECK (dining_option = ANY (ARRAY['indoor'::text, 'delivery'::text])),
+  dining_option text CHECK (dining_option = ANY (ARRAY['indoor'::text, 'delivery'::text, 'pickup'::text])),
   table_id uuid,
   takeaway_packs smallint DEFAULT 0,
   takeaway_pack_price integer DEFAULT 0,
@@ -421,6 +435,7 @@ CREATE TABLE public.order_items (
   special_instructions text,
   is_kitchen_item boolean DEFAULT true,
   is_bar_item boolean DEFAULT false,
+  image_url text,
   CONSTRAINT order_items_pkey PRIMARY KEY (id),
   CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
   CONSTRAINT order_items_menu_item_id_fkey FOREIGN KEY (menu_item_id) REFERENCES public.menu_items(id),
@@ -444,7 +459,7 @@ CREATE TABLE public.orders (
   customer_id uuid,
   invoice_no text NOT NULL UNIQUE,
   order_time timestamp with time zone DEFAULT now(),
-  dining_option text NOT NULL CHECK (dining_option = ANY (ARRAY['indoor'::text, 'delivery'::text])),
+  dining_option text NOT NULL CHECK (dining_option = ANY (ARRAY['indoor'::text, 'delivery'::text, 'pickup'::text])),
   table_id uuid,
   takeaway_packs integer DEFAULT 0,
   takeaway_pack_price integer DEFAULT 0,

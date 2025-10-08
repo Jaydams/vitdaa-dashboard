@@ -8,6 +8,8 @@ export interface BusinessSettings {
   business_id: string;
   vat_rate: number;
   service_charge_rate: number;
+  enabled_dining_options: string[];
+  default_takeaway_pack_price: number;
   created_at: string;
   updated_at: string;
 }
@@ -16,11 +18,15 @@ export interface CreateBusinessSettingsData {
   business_id: string;
   vat_rate?: number;
   service_charge_rate?: number;
+  enabled_dining_options?: string[];
+  default_takeaway_pack_price?: number;
 }
 
 export interface UpdateBusinessSettingsData {
   vat_rate?: number;
   service_charge_rate?: number;
+  enabled_dining_options?: string[];
+  default_takeaway_pack_price?: number;
 }
 
 /**
@@ -69,6 +75,8 @@ export async function getBusinessSettingsWithDefaults(
         business_id: businessId,
         vat_rate: 7.5,
         service_charge_rate: 2.5,
+        enabled_dining_options: ["indoor", "delivery", "pickup"],
+        default_takeaway_pack_price: 100,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -83,6 +91,8 @@ export async function getBusinessSettingsWithDefaults(
       business_id: businessId,
       vat_rate: 7.5,
       service_charge_rate: 2.5,
+      enabled_dining_options: ["indoor", "delivery", "pickup"],
+      default_takeaway_pack_price: 100,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -102,6 +112,12 @@ export async function createBusinessSettings(
       business_id: data.business_id,
       vat_rate: data.vat_rate ?? 7.5,
       service_charge_rate: data.service_charge_rate ?? 2.5,
+      enabled_dining_options: data.enabled_dining_options ?? [
+        "indoor",
+        "delivery",
+        "pickup",
+      ],
+      default_takeaway_pack_price: data.default_takeaway_pack_price ?? 100,
     };
 
     const { data: newSettings, error } = await supabase

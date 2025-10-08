@@ -46,6 +46,13 @@ const businessSettingsSchema = z.object({
       (val) => Number.isFinite(val),
       "Service charge rate must be a valid number"
     ),
+  enabled_dining_options: z
+    .array(z.enum(["indoor", "delivery", "pickup"]))
+    .min(1, "At least one dining option must be enabled"),
+  default_takeaway_pack_price: z
+    .number()
+    .min(0, "Takeaway pack price must be 0 or greater")
+    .refine((val) => Number.isFinite(val), "Price must be a valid number"),
 });
 
 type BusinessSettingsFormData = z.infer<typeof businessSettingsSchema>;
@@ -67,6 +74,13 @@ export default function BusinessSettingsForm({
     defaultValues: {
       vat_rate: initialSettings?.vat_rate ?? 7.5,
       service_charge_rate: initialSettings?.service_charge_rate ?? 2.5,
+      enabled_dining_options: initialSettings?.enabled_dining_options ?? [
+        "indoor",
+        "delivery",
+        "pickup",
+      ],
+      default_takeaway_pack_price:
+        initialSettings?.default_takeaway_pack_price ?? 100,
     },
   });
 
@@ -83,6 +97,8 @@ export default function BusinessSettingsForm({
         await upsertBusinessSettings(businessId, {
           vat_rate: data.vat_rate,
           service_charge_rate: data.service_charge_rate,
+          enabled_dining_options: data.enabled_dining_options,
+          default_takeaway_pack_price: data.default_takeaway_pack_price,
         });
 
         toast.success("Business settings updated successfully");
@@ -174,6 +190,94 @@ export default function BusinessSettingsForm({
                     </FormControl>
                     <FormDescription>
                       Service charge rate applied to orders (default: 2.5%)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Dining Options Configuration */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Dining Options</h3>
+              <FormField
+                control={form.control}
+                name="enabled_dining_options"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Enabled Dining Options</FormLabel>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {["indoor", "delivery", "pickup"].map((option) => (
+                        <div
+                          key={option}
+                          className="flex items-center space-x-2"
+                        >
+                          <input
+                            type="checkbox"
+                            id={option}
+                            checked={field.value?.includes(option) || false}
+                            onChange={(e) => {
+                              const currentOptions = field.value || [];
+                              if (e.target.checked) {
+                                field.onChange([...currentOptions, option]);
+                              } else {
+                                field.onChange(
+                                  currentOptions.filter((o) => o !== option)
+                                );
+                              }
+                            }}
+                            className="rounded border-gray-300"
+                          />
+                          <label
+                            htmlFor={option}
+                            className="text-sm font-medium capitalize"
+                          >
+                            {option === "indoor"
+                              ? "Indoor Dining"
+                              : option === "delivery"
+                              ? "Delivery"
+                              : "Pickup"}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Takeaway Pack Settings */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Takeaway Pack Settings</h3>
+              <FormField
+                control={form.control}
+                name="default_takeaway_pack_price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Default Takeaway Pack Price (₦)</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          step="1"
+                          min="0"
+                          placeholder="100"
+                          {...field}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value);
+                            field.onChange(isNaN(value) ? 0 : value);
+                          }}
+                          className="pr-8"
+                        />
+                        <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">
+                          ₦
+                        </span>
+                      </div>
+                    </FormControl>
+                    <FormDescription>
+                      Default price for takeaway packs (can be customized per
+                      pack type in main settings)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

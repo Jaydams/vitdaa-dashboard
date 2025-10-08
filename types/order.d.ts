@@ -10,7 +10,7 @@ export type OrderMethod =
   | "card"
   | "transfer"
   | "direct_debit";
-export type DiningOption = "indoor" | "delivery";
+export type DiningOption = "indoor" | "delivery" | "pickup";
 
 export type OrderItem = {
   id: string;
@@ -20,6 +20,7 @@ export type OrderItem = {
   menu_item_price: number;
   quantity: number;
   total_price: number;
+  image_url?: string;
   created_at: string;
 };
 
