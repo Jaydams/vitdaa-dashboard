@@ -67,13 +67,36 @@ export async function updateBusinessOwnerSettings(
 
   // Delivery locations - handle foreign key constraints
   if (Array.isArray(delivery_locations)) {
-    // Get existing delivery locations
-    const { data: existingLocations } = await supabase
-      .from("delivery_locations")
-      .select("id, name, price, state")
-      .eq("business_id", id);
+    console.log("Updating delivery locations:", delivery_locations);
+
+    // Get existing active delivery locations (with fallback for tables without status column)
+    let existingLocations;
+    try {
+      // Try to fetch with status filtering
+      const { data, error } = await supabase
+        .from("delivery_locations")
+        .select("id, name, price, state, status")
+        .eq("business_id", id)
+        .or("status.is.null,status.eq.active"); // Include null status (old records) and active
+
+      if (error && error.message.includes("status")) {
+        throw error; // Status column doesn't exist, trigger fallback
+      }
+      existingLocations = data;
+    } catch (statusError) {
+      // Fallback: status column doesn't exist yet, fetch all
+      console.log(
+        "Status column not found in update, fetching all delivery locations"
+      );
+      const { data } = await supabase
+        .from("delivery_locations")
+        .select("id, name, price, state")
+        .eq("business_id", id);
+      existingLocations = data;
+    }
 
     const existing = existingLocations || [];
+    console.log("Existing active delivery locations:", existing);
 
     // Instead of deleting all, we'll update/insert/delete selectively
     const newLocationIds = new Set();
@@ -122,32 +145,58 @@ export async function updateBusinessOwnerSettings(
     const locationsToDelete = existing.filter(
       (loc) => !newLocationIds.has(loc.id)
     );
+    console.log("Locations to delete:", locationsToDelete);
 
     for (const location of locationsToDelete) {
-      // Check if location is referenced by any orders
-      const { count: orderCount } = await supabase
-        .from("orders")
-        .select("id", { count: "exact", head: true })
-        .eq("delivery_location_id", location.id);
+      // Try to physically delete first (if constraints allow)
+      const { error: deleteError } = await supabase
+        .from("delivery_locations")
+        .delete()
+        .eq("id", location.id);
 
-      if (orderCount === 0) {
-        // Safe to delete - no orders reference this location
-        const { error: deleteError } = await supabase
+      if (deleteError) {
+        console.log(
+          "Physical deletion failed, using soft delete:",
+          deleteError.message
+        );
+
+        // Fallback to soft delete - mark as inactive
+        const { error: softDeleteError } = await supabase
           .from("delivery_locations")
-          .delete()
+          .update({ status: "inactive" })
           .eq("id", location.id);
 
-        if (deleteError) {
-          console.error("Failed to delete delivery location", deleteError);
-          // Don't throw error for delete failures - just log them
+        if (softDeleteError) {
+          if (softDeleteError.message.includes("status")) {
+            console.log(
+              "Status column doesn't exist yet, location will remain until migration is run"
+            );
+          } else {
+            console.error(
+              "Failed to soft delete delivery location",
+              softDeleteError
+            );
+          }
+          // Don't throw error - just log it
+        } else {
+          console.log(
+            "Successfully soft deleted delivery location:",
+            location.id
+          );
         }
+      } else {
+        console.log(
+          "Successfully physically deleted delivery location:",
+          location.id
+        );
       }
-      // If location is referenced by orders, we skip deletion to maintain data integrity
     }
   }
 
   // Takeaway packs - handle foreign key constraints
   if (Array.isArray(takeaway_packs)) {
+    console.log("Updating takeaway packs:", takeaway_packs);
+
     // Get existing takeaway packs
     const { data: existingPacks } = await supabase
       .from("takeaway_packs")
@@ -155,6 +204,8 @@ export async function updateBusinessOwnerSettings(
       .eq("business_id", id);
 
     const existing = existingPacks || [];
+    console.log("Existing takeaway packs:", existing);
+
     const newPackIds = new Set();
 
     // Update or insert takeaway packs
@@ -198,27 +249,22 @@ export async function updateBusinessOwnerSettings(
 
     // Only delete packs that are not referenced by orders
     const packsToDelete = existing.filter((pack) => !newPackIds.has(pack.id));
+    console.log("Packs to delete:", packsToDelete);
 
     for (const pack of packsToDelete) {
-      // Check if pack is referenced by any orders (assuming there's a takeaway_pack_id field)
-      const { count: orderCount } = await supabase
-        .from("orders")
-        .select("id", { count: "exact", head: true })
-        .eq("takeaway_pack_id", pack.id);
+      // Takeaway packs are not directly referenced by orders (orders only store pack count and price)
+      // So we can safely delete them without foreign key constraint issues
+      const { error: deleteError } = await supabase
+        .from("takeaway_packs")
+        .delete()
+        .eq("id", pack.id);
 
-      if (orderCount === 0) {
-        // Safe to delete - no orders reference this pack
-        const { error: deleteError } = await supabase
-          .from("takeaway_packs")
-          .delete()
-          .eq("id", pack.id);
-
-        if (deleteError) {
-          console.error("Failed to delete takeaway pack", deleteError);
-          // Don't throw error for delete failures - just log them
-        }
+      if (deleteError) {
+        console.error("Failed to delete takeaway pack", deleteError);
+        // Don't throw error for delete failures - just log them
+      } else {
+        console.log("Successfully deleted takeaway pack:", pack.id);
       }
-      // If pack is referenced by orders, we skip deletion to maintain data integrity
     }
   }
 
@@ -318,11 +364,29 @@ export async function getBusinessOwnerSettings(id: string) {
     .eq("id", id)
     .single();
   if (error) throw error;
-  // Fetch delivery locations
-  const { data: delivery_locations } = await supabase
-    .from("delivery_locations")
-    .select("id, name, price, state")
-    .eq("business_id", id);
+  // Fetch active delivery locations only (with fallback for tables without status column)
+  let delivery_locations;
+  try {
+    // Try to fetch with status filtering
+    const { data, error } = await supabase
+      .from("delivery_locations")
+      .select("id, name, price, state, status")
+      .eq("business_id", id)
+      .or("status.is.null,status.eq.active"); // Include null status (old records) and active
+
+    if (error && error.message.includes("status")) {
+      throw error; // Status column doesn't exist, trigger fallback
+    }
+    delivery_locations = data;
+  } catch (statusError) {
+    // Fallback: status column doesn't exist yet, fetch all
+    console.log("Status column not found, fetching all delivery locations");
+    const { data } = await supabase
+      .from("delivery_locations")
+      .select("id, name, price, state")
+      .eq("business_id", id);
+    delivery_locations = data;
+  }
   // Fetch takeaway packs
   const { data: takeaway_packs } = await supabase
     .from("takeaway_packs")

@@ -1,5 +1,5 @@
 import PageTitle from "@/components/shared/PageTitle";
-import SettingsForm from "./_components/SettingsForm";
+import SettingsFormClient from "./_components/SettingsFormClient";
 import AdminPinModal from "./_components/AdminPinModal";
 import SettingsErrorHandler from "./_components/SettingsErrorHandler";
 import BusinessSettingsForm from "./_components/BusinessSettingsForm";
@@ -74,6 +74,14 @@ export default async function SettingsPage() {
         typeof settings.number_of_tables === "number"
           ? settings.number_of_tables
           : 0,
+      // Load dining options and default takeaway pack price from business_settings
+      enabled_dining_options: businessSettings?.enabled_dining_options ?? [
+        "indoor",
+        "delivery",
+        "pickup",
+      ],
+      default_takeaway_pack_price:
+        businessSettings?.default_takeaway_pack_price ?? 100,
     };
   }
 
@@ -167,7 +175,7 @@ export default async function SettingsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <SettingsForm
+          <SettingsFormClient
             defaultValues={defaultValues}
             ownerId={businessOwnerId || ""}
           />
