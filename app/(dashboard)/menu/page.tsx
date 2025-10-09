@@ -28,9 +28,12 @@ export default async function MenuPage({ searchParams }: MenuPageProps) {
   }
 
   // Extract search parameters
-  const page = Number(searchParams.page) || 1;
+  const resolvedSearchParams = await searchParams;
+  const page = Number(resolvedSearchParams.page) || 1;
   const search =
-    typeof searchParams.search === "string" ? searchParams.search : undefined;
+    typeof resolvedSearchParams.search === "string"
+      ? resolvedSearchParams.search
+      : undefined;
 
   // Fetch initial data using the server action, filtered by ownerId and search
   const { data: menuItems, ...pagination } = await fetchMenu({

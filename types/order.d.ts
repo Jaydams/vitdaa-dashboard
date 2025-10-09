@@ -3,6 +3,7 @@ export type OrderStatus =
   | "processing"
   | "ready"
   | "delivered"
+  | "completed"
   | "cancelled";
 export type OrderMethod =
   | "cash"
@@ -48,6 +49,16 @@ export type Customer = {
   updated_at: string;
 };
 
+export type CustomCharge = {
+  id?: string;
+  order_id?: string;
+  charge_name: string;
+  charge_type: "percentage" | "fixed";
+  charge_value: number;
+  calculated_amount: number;
+  created_at?: string;
+};
+
 export type Order = {
   id: string;
   business_id: string;
@@ -69,6 +80,9 @@ export type Order = {
   vat_amount: number;
   service_charge: number;
   total_amount: number;
+  custom_charges_total?: number;
+  vat_rate: number;
+  service_charge_rate: number;
   payment_method: OrderMethod;
   status: OrderStatus;
   notes?: string;
@@ -78,6 +92,7 @@ export type Order = {
   customer?: Customer;
   items?: OrderItem[];
   payment?: Payment;
+  custom_charges?: CustomCharge[];
   table?: {
     id: string;
     table_number: string;

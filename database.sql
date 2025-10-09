@@ -78,8 +78,21 @@ CREATE TABLE public.business_owner (
   squadco_beneficiary_account character varying,
   date_of_birth date,
   wallet_status text DEFAULT 'uninitialized'::text CHECK (wallet_status = ANY (ARRAY['uninitialized'::text, 'pending_pin_setup'::text, 'pending_create_virtual_account'::text, 'active'::text, 'suspended'::text])),
+  updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT business_owner_pkey PRIMARY KEY (id),
   CONSTRAINT business_owner_duplicate_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.business_settings (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  business_id uuid NOT NULL UNIQUE,
+  vat_rate numeric DEFAULT 7.5,
+  service_charge_rate numeric DEFAULT 2.5,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  enabled_dining_options jsonb DEFAULT '["indoor", "delivery", "pickup"]'::jsonb,
+  default_takeaway_pack_price integer DEFAULT 100,
+  CONSTRAINT business_settings_pkey PRIMARY KEY (id),
+  CONSTRAINT business_settings_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
 );
 CREATE TABLE public.business_wallet_transactions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -114,20 +127,6 @@ CREATE TABLE public.business_wallets (
   CONSTRAINT business_wallets_pkey PRIMARY KEY (id),
   CONSTRAINT business_wallets_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
 );
--- Note: business_settings table already exists in production with basic structure
--- The following represents the complete schema after migrations:
--- CREATE TABLE public.business_settings (
---   id uuid NOT NULL DEFAULT gen_random_uuid(),
---   business_id uuid NOT NULL UNIQUE,
---   vat_rate numeric(5,2) DEFAULT 7.5,
---   service_charge_rate numeric(5,2) DEFAULT 2.5,
---   enabled_dining_options jsonb DEFAULT '["indoor", "delivery", "pickup"]'::jsonb,
---   default_takeaway_pack_price integer DEFAULT 100,
---   created_at timestamp with time zone DEFAULT now(),
---   updated_at timestamp with time zone DEFAULT now(),
---   CONSTRAINT business_settings_pkey PRIMARY KEY (id),
---   CONSTRAINT business_settings_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id) ON DELETE CASCADE
--- );
 CREATE TABLE public.cart (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid,
@@ -146,10 +145,15 @@ CREATE TABLE public.cart (
   delivery_method text DEFAULT 'pickup'::text CHECK (delivery_method = ANY (ARRAY['pickup'::text, 'rider'::text])),
   rider_name text,
   rider_phone text,
+  customer_name text,
+  customer_phone text,
+  customer_address text,
+  delivery_location_id uuid,
   CONSTRAINT cart_pkey PRIMARY KEY (id),
   CONSTRAINT cart_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.personal_users(id),
   CONSTRAINT cart_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.business_owner(id),
-  CONSTRAINT cart_table_id_fkey FOREIGN KEY (table_id) REFERENCES public.tables(id)
+  CONSTRAINT cart_table_id_fkey FOREIGN KEY (table_id) REFERENCES public.tables(id),
+  CONSTRAINT cart_delivery_location_id_fkey FOREIGN KEY (delivery_location_id) REFERENCES public.delivery_locations(id)
 );
 CREATE TABLE public.comments (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -180,6 +184,7 @@ CREATE TABLE public.delivery_locations (
   name text NOT NULL,
   price integer NOT NULL,
   state text,
+  status text DEFAULT 'active'::text CHECK (status = ANY (ARRAY['active'::text, 'inactive'::text, 'deleted'::text])),
   CONSTRAINT delivery_locations_pkey PRIMARY KEY (id),
   CONSTRAINT delivery_locations_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
 );
@@ -459,7 +464,7 @@ CREATE TABLE public.orders (
   customer_id uuid,
   invoice_no text NOT NULL UNIQUE,
   order_time timestamp with time zone DEFAULT now(),
-  dining_option text NOT NULL CHECK (dining_option = ANY (ARRAY['indoor'::text, 'delivery'::text, 'pickup'::text])),
+  dining_option text NOT NULL CHECK (dining_option = ANY (ARRAY['indoor'::text, 'delivery'::text])),
   table_id uuid,
   takeaway_packs integer DEFAULT 0,
   takeaway_pack_price integer DEFAULT 0,
@@ -498,9 +503,9 @@ CREATE TABLE public.orders (
   CONSTRAINT orders_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
   CONSTRAINT orders_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id),
   CONSTRAINT orders_table_id_fkey FOREIGN KEY (table_id) REFERENCES public.tables(id),
-  CONSTRAINT orders_delivery_location_id_fkey FOREIGN KEY (delivery_location_id) REFERENCES public.delivery_locations(id),
   CONSTRAINT orders_assigned_to_staff_id_fkey FOREIGN KEY (assigned_to_staff_id) REFERENCES public.staff(id),
-  CONSTRAINT orders_status_updated_by_fkey FOREIGN KEY (status_updated_by) REFERENCES public.staff(id)
+  CONSTRAINT orders_status_updated_by_fkey FOREIGN KEY (status_updated_by) REFERENCES public.staff(id),
+  CONSTRAINT orders_delivery_location_id_fkey FOREIGN KEY (delivery_location_id) REFERENCES public.delivery_locations(id)
 );
 CREATE TABLE public.payments (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

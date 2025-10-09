@@ -11,6 +11,10 @@ interface UseOrdersRealtimeProps {
   perPage?: number;
   status?: string;
   search?: string;
+  method?: string;
+  limit?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 export function useOrdersRealtime({
@@ -18,6 +22,10 @@ export function useOrdersRealtime({
   perPage = 10,
   status,
   search,
+  method,
+  limit,
+  startDate,
+  endDate,
 }: UseOrdersRealtimeProps) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [pagination, setPagination] = useState<PaginationProps>({
@@ -45,6 +53,10 @@ export function useOrdersRealtime({
         perPage,
         status: status as any,
         search,
+        method: method as any,
+        limit,
+        startDate,
+        endDate,
       });
 
       setOrders(result.data);
@@ -75,7 +87,7 @@ export function useOrdersRealtime({
 
   useEffect(() => {
     loadOrders();
-  }, [page, perPage, status, search]);
+  }, [page, perPage, status, search, method, limit, startDate, endDate]);
 
   useEffect(() => {
     // Subscribe to realtime changes on orders table

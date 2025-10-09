@@ -9,7 +9,10 @@ interface InvoiceTemplateProps {
   className?: string;
 }
 
-export function InvoiceTemplate({ order, className = "" }: InvoiceTemplateProps) {
+export function InvoiceTemplate({
+  order,
+  className = "",
+}: InvoiceTemplateProps) {
   const businessName = "The Blueplate Restaurant";
   const businessAddress = "123 Restaurant Street, Kaduna, Nigeria";
   const businessPhone = "+234 801 234 5678";
@@ -71,8 +74,8 @@ export function InvoiceTemplate({ order, className = "" }: InvoiceTemplateProps)
             </p>
             {order.table && (
               <p className="text-gray-600">
-                <span className="font-medium">Table:</span>{" "}
-                Table {order.table.table_number}
+                <span className="font-medium">Table:</span> Table{" "}
+                {order.table.table_number}
               </p>
             )}
             {order.delivery_location && (
@@ -147,14 +150,22 @@ export function InvoiceTemplate({ order, className = "" }: InvoiceTemplateProps)
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Subtotal:</span>
-              <span className="font-medium">{formatAmount(order.subtotal)}</span>
+              <span className="font-medium">
+                {formatAmount(order.subtotal)}
+              </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">VAT (7.5%):</span>
-              <span className="font-medium">{formatAmount(order.vat_amount)}</span>
+              <span className="text-gray-600">
+                VAT ({order.vat_rate || 7.5}%):
+              </span>
+              <span className="font-medium">
+                {formatAmount(order.vat_amount)}
+              </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Service Charge (2.5%):</span>
+              <span className="text-gray-600">
+                Service Charge ({order.service_charge_rate || 2.5}%):
+              </span>
               <span className="font-medium">
                 {formatAmount(order.service_charge)}
               </span>
@@ -165,7 +176,9 @@ export function InvoiceTemplate({ order, className = "" }: InvoiceTemplateProps)
                   Takeaway Packs (x{order.takeaway_packs}):
                 </span>
                 <span className="font-medium">
-                  {formatAmount(order.takeaway_packs * order.takeaway_pack_price)}
+                  {formatAmount(
+                    order.takeaway_packs * order.takeaway_pack_price
+                  )}
                 </span>
               </div>
             )}
@@ -223,4 +236,4 @@ export function InvoiceTemplate({ order, className = "" }: InvoiceTemplateProps)
       </div>
     </div>
   );
-} 
+}

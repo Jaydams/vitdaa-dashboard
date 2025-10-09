@@ -20,6 +20,7 @@ interface MenuGridProps {
   error?: string;
   onRetry?: () => void;
   className?: string;
+  isOrderModalOpen?: boolean;
 }
 
 /**
@@ -35,6 +36,7 @@ export function MenuGrid({
   error,
   onRetry,
   className,
+  isOrderModalOpen = false,
 }: MenuGridProps) {
   const isOnline = useNetworkStatus();
   // Loading state with smooth transition
@@ -187,12 +189,12 @@ export function MenuGrid({
           "grid-cols-1 xs:grid-cols-2",
           // Small tablets: 2-3 columns
           "sm:grid-cols-2 md:grid-cols-3",
-          // Large tablets and small desktop: 3-4 columns
-          "lg:grid-cols-3 xl:grid-cols-4",
-          // Large desktop: 4-5 columns
-          "2xl:grid-cols-5",
-          // Ultra-wide screens: up to 6 columns
-          "3xl:grid-cols-6",
+          // Conditional layout based on order modal state
+          isOrderModalOpen
+            ? // When order modal is open: max 3 columns to prevent cramping
+              "lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-3"
+            : // When order modal is closed: normal responsive layout
+              "lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6",
           // Ensure consistent row heights
           "auto-rows-fr",
           // Minimum card width to prevent too narrow cards

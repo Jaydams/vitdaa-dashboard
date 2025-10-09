@@ -17,6 +17,10 @@ export default function RecentOrders({ perPage = 10 }: Props) {
   const ordersPage = searchParams.get("page");
   const status = searchParams.get("status");
   const search = searchParams.get("search");
+  const method = searchParams.get("method");
+  const limit = searchParams.get("limit");
+  const startDate = searchParams.get("startDate");
+  const endDate = searchParams.get("endDate");
   const page = Math.max(Math.trunc(Number(ordersPage)) || 1, 1);
 
   const { orders, pagination, loading, error, refresh } = useOrdersRealtime({
@@ -24,6 +28,10 @@ export default function RecentOrders({ perPage = 10 }: Props) {
     perPage,
     status: status || undefined,
     search: search || undefined,
+    method: method || undefined,
+    limit: limit || undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
   });
 
   if (loading)

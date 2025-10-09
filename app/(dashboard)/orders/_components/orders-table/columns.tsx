@@ -25,7 +25,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatAmount } from "@/helpers/formatAmount";
-import { printInvoice, downloadInvoiceAsPDF, downloadInvoiceAsJSON, downloadInvoiceAsCSV } from "@/lib/invoice-utils";
+import {
+  printInvoice,
+  downloadInvoiceAsPDF,
+  downloadInvoiceAsJSON,
+  downloadInvoiceAsCSV,
+} from "@/lib/invoice-utils";
 
 import { ORDER_STATUSES } from "@/constants/orders";
 import { OrderBadgeVariants } from "@/constants/badge";
@@ -131,25 +136,27 @@ export const columns: ColumnDef<Order>[] = [
       const orderId = row.original.id;
 
       return (
-        <Select
-          onValueChange={(value: OrderStatus) => changeStatus(value, orderId)}
-        >
-          <SelectTrigger className="capitalize">
-            <SelectValue placeholder={row.original.status} />
-          </SelectTrigger>
+        <div onClick={(e) => e.stopPropagation()}>
+          <Select
+            onValueChange={(value: OrderStatus) => changeStatus(value, orderId)}
+          >
+            <SelectTrigger className="capitalize">
+              <SelectValue placeholder={row.original.status} />
+            </SelectTrigger>
 
-          <SelectContent>
-            {ORDER_STATUSES.map((badgeStatus) => (
-              <SelectItem
-                value={badgeStatus}
-                key={badgeStatus}
-                className="capitalize"
-              >
-                {badgeStatus}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <SelectContent>
+              {ORDER_STATUSES.map((badgeStatus) => (
+                <SelectItem
+                  value={badgeStatus}
+                  key={badgeStatus}
+                  className="capitalize"
+                >
+                  {badgeStatus}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       );
     },
   },
@@ -157,9 +164,12 @@ export const columns: ColumnDef<Order>[] = [
     header: "invoice",
     cell: ({ row }) => {
       const order = row.original;
-      
+
       return (
-        <div className="flex items-center gap-1">
+        <div
+          className="flex items-center gap-1"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Print Button */}
           <Tooltip>
             <TooltipTrigger asChild>
@@ -209,9 +219,7 @@ export const columns: ColumnDef<Order>[] = [
                 Download as CSV
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href={`/orders/${order.id}`}>
-                  View Details
-                </Link>
+                <Link href={`/orders/${order.id}`}>View Details</Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

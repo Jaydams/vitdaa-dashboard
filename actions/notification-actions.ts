@@ -9,11 +9,11 @@ export async function createNotification(notificationData: {
   business_id: string;
   user_id?: string;
   staff_id?: string;
-  type: Notification['type'];
+  type: Notification["type"];
   title: string;
   message: string;
   data?: Record<string, any>;
-  priority?: Notification['priority'];
+  priority?: Notification["priority"];
   expires_at?: string;
 }) {
   try {
@@ -57,7 +57,7 @@ export async function fetchNotifications({
   limit?: number;
   offset?: number;
   unreadOnly?: boolean;
-  type?: Notification['type'];
+  type?: Notification["type"];
 } = {}) {
   try {
     const supabase = await createClient();
@@ -81,8 +81,10 @@ export async function fetchNotifications({
       query = query.eq("type", type);
     }
 
-    const { data: notifications, error } = await query
-      .range(offset, offset + limit - 1);
+    const { data: notifications, error } = await query.range(
+      offset,
+      offset + limit - 1
+    );
 
     if (error) {
       console.error("Error fetching notifications:", error);
@@ -113,13 +115,15 @@ export async function getUnreadNotificationCount() {
 
     if (error) {
       console.error("Error getting unread notification count:", error);
-      throw new Error("Failed to get unread notification count");
+      // Return 0 instead of throwing to prevent blocking the UI
+      return 0;
     }
 
     return count || 0;
   } catch (error) {
     console.error("Error in getUnreadNotificationCount:", error);
-    throw error;
+    // Return 0 instead of throwing to prevent blocking the UI
+    return 0;
   }
 }
 
@@ -134,9 +138,9 @@ export async function markNotificationAsRead(notificationId: string) {
 
     const { error } = await supabase
       .from("notifications")
-      .update({ 
+      .update({
         is_read: true,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq("id", notificationId)
       .eq("business_id", businessOwnerId);
@@ -165,9 +169,9 @@ export async function markAllNotificationsAsRead() {
 
     const { error } = await supabase
       .from("notifications")
-      .update({ 
+      .update({
         is_read: true,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq("business_id", businessOwnerId)
       .eq("is_read", false);

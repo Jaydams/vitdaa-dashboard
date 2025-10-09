@@ -15,10 +15,21 @@ import {
 
 type Props = {
   className?: string;
+  date?: Date;
+  onDateChange?: (date: Date | undefined) => void;
+  placeholder?: string;
 };
 
-export default function DatePicker({ className }: Props) {
-  const [date, setDate] = useState<Date>();
+export default function DatePicker({
+  className,
+  date: externalDate,
+  onDateChange,
+  placeholder = "Pick a date",
+}: Props) {
+  const [internalDate, setInternalDate] = useState<Date>();
+
+  const date = externalDate !== undefined ? externalDate : internalDate;
+  const setDate = onDateChange || setInternalDate;
 
   return (
     <Popover>
@@ -31,7 +42,7 @@ export default function DatePicker({ className }: Props) {
             className
           )}
         >
-          {date ? format(date, "PPP") : <span>Pick a date</span>}
+          {date ? format(date, "PPP") : <span>{placeholder}</span>}
 
           <CalendarIcon className="ml-2 size-4" />
         </Button>

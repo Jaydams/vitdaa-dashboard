@@ -27,11 +27,13 @@ import { getPaginationButtons } from "@/helpers/getPaginationButtons";
 interface DataTableProps<TData> {
   table: TableType<TData>;
   pagination: PaginationProps;
+  onRowClick?: (row: TData) => void;
 }
 
 export default function DataTable<TData>({
   table,
   pagination,
+  onRowClick,
 }: DataTableProps<TData>) {
   const paginationButtons = getPaginationButtons({
     totalPages: pagination.pages || 0,
@@ -70,7 +72,12 @@ export default function DataTable<TData>({
               <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
-                className="hover:bg-transparent"
+                className={
+                  onRowClick
+                    ? "hover:bg-muted/50 cursor-pointer"
+                    : "hover:bg-transparent"
+                }
+                onClick={() => onRowClick?.(row.original)}
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id} className="whitespace-nowrap">

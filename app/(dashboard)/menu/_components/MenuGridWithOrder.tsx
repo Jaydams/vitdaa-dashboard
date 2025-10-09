@@ -31,6 +31,7 @@ import EditMenu from "./EditMenu";
 // Hooks and utilities
 import { useOrderState } from "@/hooks/use-order-state";
 import { useBusinessSettings } from "@/hooks/use-business-settings";
+import { cn } from "@/lib/utils";
 import {
   addMenuItem,
   deleteMenuItem,
@@ -68,7 +69,7 @@ export function MenuGridWithOrder({
   initialData,
   initialPagination,
   ownerId,
-  perPage = 10,
+  perPage = 24,
 }: MenuGridWithOrderProps) {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
@@ -203,7 +204,16 @@ export function MenuGridWithOrder({
         orderPanelVisible={isOrderPanelVisible}
         onToggleOrderPanel={toggleOrderPanel}
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div
+          className={cn(
+            "grid gap-3 sm:gap-4 lg:gap-6",
+            "grid-cols-1 xs:grid-cols-2",
+            "sm:grid-cols-2 md:grid-cols-3",
+            isOrderModalOpen || isOrderPanelVisible
+              ? "lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-3"
+              : "lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6"
+          )}
+        >
           {Array.from({ length: perPage }).map((_, index) => (
             <div
               key={index}
@@ -260,6 +270,7 @@ export function MenuGridWithOrder({
             onEditItem={handleOpenEditSheet}
             onDeleteItem={handleDeleteMenuItem}
             loading={isLoading}
+            isOrderModalOpen={isOrderModalOpen || isOrderPanelVisible}
           />
 
           {/* Pagination */}

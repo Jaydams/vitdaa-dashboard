@@ -4,7 +4,7 @@ import { getServerBusinessOwnerId } from "@/lib/getServerBusinessOwnerId";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     const businessOwnerId = await getServerBusinessOwnerId();
@@ -13,7 +13,7 @@ export async function PUT(
     }
 
     const supabase = await createClient();
-    const { orderId } = params;
+    const { id: orderId } = params;
     const body = await request.json();
 
     const { status } = body;
@@ -26,12 +26,15 @@ export async function PUT(
     }
 
     // Validate status
-    const validStatuses = ["pending", "processing", "ready", "served", "cancelled"];
+    const validStatuses = [
+      "pending",
+      "processing",
+      "ready",
+      "served",
+      "cancelled",
+    ];
     if (!validStatuses.includes(status)) {
-      return NextResponse.json(
-        { error: "Invalid status" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
     // Check if order exists and belongs to this business
@@ -43,18 +46,15 @@ export async function PUT(
       .single();
 
     if (orderError || !order) {
-      return NextResponse.json(
-        { error: "Order not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
     // Update order status
     const { data: updatedOrder, error: updateError } = await supabase
       .from("orders")
-      .update({ 
+      .update({
         status,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq("id", orderId)
       .select()
@@ -83,7 +83,7 @@ export async function PUT(
 
     return NextResponse.json(updatedOrder);
   } catch (error) {
-    console.error("Error in PUT /api/orders/[orderId]/status:", error);
+    console.error("Error in PUT /api/orders/[id]/status:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
