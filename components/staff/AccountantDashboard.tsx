@@ -11,6 +11,7 @@ import {
   RefreshCw,
   AlertCircle,
   BarChart3,
+  Users,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,8 +24,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StaffSession } from "@/types/auth";
 import { PermissionGuard } from "./RoleBasedDashboard";
+import { FinancialReportingInterface } from "./FinancialReportingInterface";
+import { RefundProcessingInterface } from "./RefundProcessingInterface";
+import { StaffPerformanceAnalytics } from "./StaffPerformanceAnalytics";
 
 interface AccountantDashboardProps {
   staffSession: StaffSession;
@@ -178,326 +183,51 @@ export default function AccountantDashboard({
 
   return (
     <div className="space-y-6">
-      {/* Financial Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <PermissionGuard
-          permissions={permissions}
-          requiredPermission="reports:read"
-        >
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Today's Revenue
-              </CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                ${mockFinancialStats.todayRevenue.toFixed(2)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {mockFinancialStats.todayOrders} orders completed
-              </p>
-            </CardContent>
-          </Card>
-        </PermissionGuard>
+      <Tabs defaultValue="reports" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="reports" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Financial Reports
+          </TabsTrigger>
+          <TabsTrigger value="refunds" className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Refund Processing
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Staff Analytics
+          </TabsTrigger>
+        </TabsList>
 
-        <PermissionGuard
-          permissions={permissions}
-          requiredPermission="transactions:read"
-        >
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Avg Order Value
-              </CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                ${mockFinancialStats.averageOrderValue.toFixed(2)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                +12% from yesterday
-              </p>
-            </CardContent>
-          </Card>
-        </PermissionGuard>
+        <TabsContent value="reports" className="space-y-6">
+          <PermissionGuard
+            permissions={permissions}
+            requiredPermission="reports:read"
+          >
+            <FinancialReportingInterface
+              businessId={staffSession.business.id}
+            />
+          </PermissionGuard>
+        </TabsContent>
 
-        <PermissionGuard
-          permissions={permissions}
-          requiredPermission="payments:read"
-        >
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Pending Payments
-              </CardTitle>
-              <AlertCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {mockFinancialStats.pendingPayments}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Awaiting processing
-              </p>
-            </CardContent>
-          </Card>
-        </PermissionGuard>
+        <TabsContent value="refunds" className="space-y-6">
+          <PermissionGuard
+            permissions={permissions}
+            requiredPermission="payments:refund"
+          >
+            <RefundProcessingInterface businessId={staffSession.business.id} />
+          </PermissionGuard>
+        </TabsContent>
 
-        <PermissionGuard
-          permissions={permissions}
-          requiredPermission="payments:refund"
-        >
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Refunds Today
-              </CardTitle>
-              <RefreshCw className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {mockFinancialStats.refundsProcessed}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                $57.50 total refunded
-              </p>
-            </CardContent>
-          </Card>
-        </PermissionGuard>
-      </div>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <PermissionGuard
-              permissions={permissions}
-              requiredPermission="reports:generate"
-            >
-              <Button>
-                <FileText className="h-4 w-4 mr-2" />
-                Generate Report
-              </Button>
-            </PermissionGuard>
-
-            <PermissionGuard
-              permissions={permissions}
-              requiredPermission="payments:refund"
-            >
-              <Button variant="outline">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Process Refund
-              </Button>
-            </PermissionGuard>
-
-            <PermissionGuard
-              permissions={permissions}
-              requiredPermission="transactions:read"
-            >
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Export Transactions
-              </Button>
-            </PermissionGuard>
-
-            <PermissionGuard
-              permissions={permissions}
-              requiredPermission="reports:read"
-            >
-              <Button variant="outline">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                View Analytics
-              </Button>
-            </PermissionGuard>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Transactions */}
-        <PermissionGuard
-          permissions={permissions}
-          requiredPermission="transactions:read"
-        >
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Recent Transactions</CardTitle>
-                <Select
-                  value={selectedPeriod}
-                  onValueChange={setSelectedPeriod}
-                >
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="today">Today</SelectItem>
-                    <SelectItem value="week">This Week</SelectItem>
-                    <SelectItem value="month">This Month</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {mockRecentTransactions.map((transaction) => (
-                  <div
-                    key={transaction.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
-                  >
-                    <div className="flex items-center space-x-3">
-                      {getPaymentMethodIcon(transaction.method)}
-                      <div>
-                        <div className="font-medium">
-                          Table {transaction.table}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {transaction.orderId} • {transaction.time}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-medium">
-                        ${transaction.amount.toFixed(2)}
-                      </div>
-                      <Badge
-                        className={getTransactionStatusColor(
-                          transaction.status
-                        )}
-                      >
-                        {transaction.status}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </PermissionGuard>
-
-        {/* Pending Refunds */}
-        <PermissionGuard
-          permissions={permissions}
-          requiredPermission="payments:refund"
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle>Pending Refunds</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {mockPendingRefunds.map((refund) => (
-                  <div key={refund.id} className="p-3 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium">{refund.orderId}</span>
-                      <Badge
-                        variant={
-                          refund.status === "approved" ? "default" : "secondary"
-                        }
-                      >
-                        {refund.status}
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-muted-foreground mb-2">
-                      <div>Amount: ${refund.amount.toFixed(2)}</div>
-                      <div>Reason: {refund.reason}</div>
-                      <div>Requested by: {refund.requestedBy}</div>
-                      <div>Time: {refund.requestTime}</div>
-                    </div>
-                    {refund.status === "pending" && (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => handleProcessRefund(refund.id)}
-                        >
-                          Approve
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          Reject
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </PermissionGuard>
-      </div>
-
-      {/* Reports Section */}
-      <PermissionGuard
-        permissions={permissions}
-        requiredPermission="reports:read"
-      >
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Financial Reports</CardTitle>
-              <div className="flex items-center gap-2">
-                <Select
-                  value={selectedReportType}
-                  onValueChange={setSelectedReportType}
-                >
-                  <SelectTrigger className="w-[150px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sales">Sales Report</SelectItem>
-                    <SelectItem value="revenue">Revenue Report</SelectItem>
-                    <SelectItem value="financial">Financial Report</SelectItem>
-                    <SelectItem value="payments">Payment Analysis</SelectItem>
-                  </SelectContent>
-                </Select>
-                <PermissionGuard
-                  permissions={permissions}
-                  requiredPermission="reports:generate"
-                >
-                  <Button
-                    size="sm"
-                    onClick={() =>
-                      handleGenerateReport(selectedReportType, selectedPeriod)
-                    }
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Generate
-                  </Button>
-                </PermissionGuard>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {mockReports.map((report, index) => (
-                <div key={index} className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium">{report.name}</span>
-                    <Badge variant="outline">{report.period}</Badge>
-                  </div>
-                  <div className="text-sm text-muted-foreground mb-3">
-                    Last generated: {report.lastGenerated}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline">
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </Button>
-                    <Button size="sm" variant="outline">
-                      View
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </PermissionGuard>
+        <TabsContent value="analytics" className="space-y-6">
+          <PermissionGuard
+            permissions={permissions}
+            requiredPermission="reports:read"
+          >
+            <StaffPerformanceAnalytics businessId={staffSession.business.id} />
+          </PermissionGuard>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -2,19 +2,23 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  Package, 
-  AlertTriangle, 
-  TrendingUp, 
+import {
+  Package,
+  AlertTriangle,
+  TrendingUp,
   Plus,
-  BarChart3
+  BarChart3,
+  FileText,
+  ShoppingCart,
 } from "lucide-react";
 import Link from "next/link";
 
 async function InventorySidebar() {
   const supabase = await createClient();
-  
-  const { data: { user } } = await supabase.auth.getUser();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return null;
   }
@@ -34,25 +38,37 @@ async function InventorySidebar() {
       title: "Dashboard",
       href: "/inventory",
       icon: BarChart3,
-      description: "Overview and statistics"
+      description: "Overview and statistics",
     },
     {
       title: "Items",
       href: "/inventory/items",
       icon: Package,
-      description: "Manage inventory items"
+      description: "Manage inventory items",
+    },
+    {
+      title: "Requests",
+      href: "/inventory/requests",
+      icon: ShoppingCart,
+      description: "Review staff requests",
     },
     {
       title: "Alerts",
       href: "/inventory/alerts",
       icon: AlertTriangle,
-      description: "View and manage alerts"
+      description: "View and manage alerts",
     },
     {
       title: "Transactions",
       href: "/inventory/transactions",
       icon: TrendingUp,
-      description: "Track inventory movements"
+      description: "Track inventory movements",
+    },
+    {
+      title: "Reports",
+      href: "/inventory/reports",
+      icon: FileText,
+      description: "Generate and export reports",
     },
   ];
 
@@ -68,10 +84,7 @@ async function InventorySidebar() {
       <nav className="space-y-2">
         {navigationItems.map((item) => (
           <Link key={item.href} href={item.href}>
-            <Button
-              variant="ghost"
-              className="w-full justify-start h-auto p-3"
-            >
+            <Button variant="ghost" className="w-full justify-start h-auto p-3">
               <item.icon className="mr-3 h-4 w-4" />
               <div className="text-left">
                 <div className="font-medium">{item.title}</div>
@@ -112,12 +125,16 @@ export default function InventoryLayout({
 }) {
   return (
     <div className="flex">
-      <Suspense fallback={<div className="w-64 bg-background border-r min-h-screen p-4">Loading...</div>}>
+      <Suspense
+        fallback={
+          <div className="w-64 bg-background border-r min-h-screen p-4">
+            Loading...
+          </div>
+        }
+      >
         <InventorySidebar />
       </Suspense>
-      <div className="flex-1 p-6">
-        {children}
-      </div>
+      <div className="flex-1 p-6">{children}</div>
     </div>
   );
 }

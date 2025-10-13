@@ -54,28 +54,28 @@ export function useDashboardState(filter: DashboardFilter): DashboardState {
     isLoading: salesLoading,
     error: salesError,
     isRefetching: salesRefetching,
-  } = useSalesMetrics(filter);
+  } = useSalesMetrics(filter.dateFilter);
 
   const {
     data: orderStatusData,
     isLoading: orderStatusLoading,
     error: orderStatusError,
     isRefetching: orderStatusRefetching,
-  } = useOrderStatusMetrics(filter);
+  } = useOrderStatusMetrics(filter.dateFilter);
 
   const {
     data: weeklySalesData,
     isLoading: weeklySalesLoading,
     error: weeklySalesError,
     isRefetching: weeklySalesRefetching,
-  } = useWeeklySalesData(filter);
+  } = useWeeklySalesData(filter.dateFilter);
 
   const {
     data: bestSellersData,
     isLoading: bestSellersLoading,
     error: bestSellersError,
     isRefetching: bestSellersRefetching,
-  } = useBestSellersData(filter);
+  } = useBestSellersData(filter.dateFilter);
 
   // Memoized computed states
   const computedState = useMemo(() => {
@@ -165,25 +165,25 @@ export function useDashboardState(filter: DashboardFilter): DashboardState {
   // Retry functions
   const retrySalesData = () => {
     queryClient.invalidateQueries({
-      queryKey: dashboardQueryKeys.sales(filter),
+      queryKey: dashboardQueryKeys.sales(filter.dateFilter),
     });
   };
 
   const retryOrderStatusData = () => {
     queryClient.invalidateQueries({
-      queryKey: dashboardQueryKeys.orderStatus(filter),
+      queryKey: dashboardQueryKeys.orderStatus(filter.dateFilter),
     });
   };
 
   const retryWeeklySalesData = () => {
     queryClient.invalidateQueries({
-      queryKey: dashboardQueryKeys.weeklySales(filter),
+      queryKey: dashboardQueryKeys.weeklySales(filter.dateFilter),
     });
   };
 
   const retryBestSellersData = () => {
     queryClient.invalidateQueries({
-      queryKey: dashboardQueryKeys.bestSellers(filter),
+      queryKey: dashboardQueryKeys.bestSellers(filter.dateFilter),
     });
   };
 

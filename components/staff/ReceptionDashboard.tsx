@@ -32,6 +32,10 @@ import { PermissionGuard } from "./RoleBasedDashboard";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { ReceptionOrderCreationModal } from "./ReceptionOrderCreationModal";
+import { TableManagementGrid } from "./TableManagementGrid";
+import { CustomerManagement } from "./CustomerManagement";
+import { PaymentProcessing } from "./PaymentProcessing";
 
 interface ReceptionDashboardProps {
   staffSession: StaffSession;
@@ -98,6 +102,10 @@ export default function ReceptionDashboard({
   });
   const [recentOrders, setRecentOrders] = useState<ReceptionOrder[]>([]);
   const [tables, setTables] = useState<ReceptionTable[]>([]);
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedOrderForPayment, setSelectedOrderForPayment] =
+    useState<ReceptionOrder | null>(null);
   const { permissions } = staffSession;
   const router = useRouter();
 
@@ -111,47 +119,70 @@ export default function ReceptionDashboard({
     const supabase = createClient();
 
     const channel = supabase
-      .channel('reception-dashboard-realtime')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'orders',
-      }, (payload) => {
-        console.log('Reception orders realtime change:', payload);
-        fetchReceptionData();
-      })
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'order_items',
-      }, (payload) => {
-        console.log('Reception order items realtime change:', payload);
-        fetchReceptionData();
-      })
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'payments',
-      }, (payload) => {
-        console.log('Reception payments realtime change:', payload);
-        fetchReceptionData();
-      })
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'tables',
-      }, (payload) => {
-        console.log('Reception tables realtime change:', payload);
-        fetchReceptionData();
-      })
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'order_status_history',
-      }, (payload) => {
-        console.log('Reception order status history realtime change:', payload);
-        fetchReceptionData();
-      })
+      .channel("reception-dashboard-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders",
+        },
+        (payload) => {
+          console.log("Reception orders realtime change:", payload);
+          fetchReceptionData();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "order_items",
+        },
+        (payload) => {
+          console.log("Reception order items realtime change:", payload);
+          fetchReceptionData();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "payments",
+        },
+        (payload) => {
+          console.log("Reception payments realtime change:", payload);
+          fetchReceptionData();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "tables",
+        },
+        (payload) => {
+          console.log("Reception tables realtime change:", payload);
+          fetchReceptionData();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "order_status_history",
+        },
+        (payload) => {
+          console.log(
+            "Reception order status history realtime change:",
+            payload
+          );
+          fetchReceptionData();
+        }
+      )
       .subscribe();
 
     return () => {
@@ -163,12 +194,14 @@ export default function ReceptionDashboard({
     setIsLoading(true);
     try {
       // Import server actions
-      const { fetchOrders, getOrderStats } = await import('@/actions/order-actions');
-      
+      const { fetchOrders, getOrderStats } = await import(
+        "@/actions/order-actions"
+      );
+
       // Fetch data using server actions
       const [statsData, ordersData] = await Promise.all([
         getOrderStats(),
-        fetchOrders({ page: 1, perPage: 10 })
+        fetchOrders({ page: 1, perPage: 10 }),
       ]);
 
       // Transform stats data
@@ -183,34 +216,40 @@ export default function ReceptionDashboard({
       });
 
       // Transform orders data
-      const transformedOrders = ordersData.data?.map((order: any) => ({
-        id: order.id,
-        invoice_no: order.invoice_no,
-        tableNumber: order.table?.table_number || null,
-        customerName: order.customer_name || "Walk-in Customer",
-        customerPhone: order.customer_phone || null,
-        customerEmail: order.customer?.email || null,
-        items: order.items?.map((item: any) => ({
-          name: item.menu_item_name,
-          quantity: item.quantity,
-          price: item.menu_item_price
-        })) || [],
-        itemCount: order.items?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0,
-        total: order.total_amount || 0,
-        status: order.status,
-        time: new Date(order.created_at).toLocaleTimeString(),
-        paymentStatus: order.payment?.[0]?.status || "pending",
-        paymentMethod: order.payment?.[0]?.payment_method || null,
-        specialRequests: order.notes,
-        createdAt: order.created_at
-      })) || [];
+      const transformedOrders =
+        ordersData.data?.map((order: any) => ({
+          id: order.id,
+          invoice_no: order.invoice_no,
+          tableNumber: order.table?.table_number || null,
+          customerName: order.customer_name || "Walk-in Customer",
+          customerPhone: order.customer_phone || null,
+          customerEmail: order.customer?.email || null,
+          items:
+            order.items?.map((item: any) => ({
+              name: item.menu_item_name,
+              quantity: item.quantity,
+              price: item.menu_item_price,
+            })) || [],
+          itemCount:
+            order.items?.reduce(
+              (sum: number, item: any) => sum + item.quantity,
+              0
+            ) || 0,
+          total: order.total_amount || 0,
+          status: order.status,
+          time: new Date(order.created_at).toLocaleTimeString(),
+          paymentStatus: order.payment?.[0]?.status || "pending",
+          paymentMethod: order.payment?.[0]?.payment_method || null,
+          specialRequests: order.notes,
+          createdAt: order.created_at,
+        })) || [];
       setRecentOrders(transformedOrders);
 
       // For tables, we'll use a simple approach for now
       setTables([]);
     } catch (error) {
-      console.error('Error fetching reception data:', error);
-      toast.error('Failed to load reception data');
+      console.error("Error fetching reception data:", error);
+      toast.error("Failed to load reception data");
     } finally {
       setIsLoading(false);
     }
@@ -276,8 +315,14 @@ export default function ReceptionDashboard({
 
   // Handler functions for order and table management
   const handleCreateOrder = () => {
-    // Navigate to order creation page
-    router.push('/admin/orders/create');
+    setIsOrderModalOpen(true);
+  };
+
+  const handleOrderCreated = (orderId: string) => {
+    toast.success("Order created successfully!");
+    fetchReceptionData(); // Refresh data
+    // Optionally navigate to order details
+    router.push(`/orders/${orderId}`);
   };
 
   const handleAssignTable = (tableNumber: number) => {
@@ -285,20 +330,22 @@ export default function ReceptionDashboard({
     router.push(`/admin/tables/${tableNumber}/assign`);
   };
 
-    const handleProcessPayment = async (orderId: string) => {
-    try {
-      // Import server action
-      const { updateOrderStatus } = await import('@/actions/order-actions');
-      
-      // Update order status to delivered
-      await updateOrderStatus(orderId, 'delivered');
-      
-      toast.success('Order marked as delivered');
-      fetchReceptionData(); // Refresh data
-    } catch (error) {
-      console.error('Payment processing error:', error);
-      toast.error('Failed to process payment');
+  const handleProcessPayment = async (orderId: string) => {
+    const order = recentOrders.find((o) => o.id === orderId);
+    if (!order) {
+      toast.error("Order not found");
+      return;
     }
+
+    setSelectedOrderForPayment(order);
+    setIsPaymentModalOpen(true);
+  };
+
+  const handlePaymentComplete = (orderId: string) => {
+    toast.success("Payment processed successfully!");
+    setIsPaymentModalOpen(false);
+    setSelectedOrderForPayment(null);
+    fetchReceptionData(); // Refresh data
   };
 
   const handleCustomerLookup = (customerInfo: string) => {
@@ -311,9 +358,10 @@ export default function ReceptionDashboard({
     router.push(`/admin/orders/${orderId}`);
   };
 
-  const filteredOrders = recentOrders.filter(order =>
-    order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    order.invoice_no.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredOrders = recentOrders.filter(
+    (order) =>
+      order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.invoice_no.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (isLoading) {
@@ -321,7 +369,9 @@ export default function ReceptionDashboard({
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-4">
           <RefreshCw className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="text-muted-foreground">Loading reception dashboard...</p>
+          <p className="text-muted-foreground">
+            Loading reception dashboard...
+          </p>
         </div>
       </div>
     );
@@ -390,7 +440,9 @@ export default function ReceptionDashboard({
               <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
                 {stats.customersServed}
               </div>
-              <p className="text-xs text-purple-600 dark:text-purple-400">Today's total</p>
+              <p className="text-xs text-purple-600 dark:text-purple-400">
+                Today's total
+              </p>
             </CardContent>
           </Card>
         </PermissionGuard>
@@ -432,7 +484,10 @@ export default function ReceptionDashboard({
               permissions={permissions}
               requiredPermission="orders:create"
             >
-              <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg" onClick={handleCreateOrder}>
+              <Button
+                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg"
+                onClick={handleCreateOrder}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 New Order
               </Button>
@@ -442,7 +497,11 @@ export default function ReceptionDashboard({
               permissions={permissions}
               requiredPermission="tables:update"
             >
-              <Button variant="outline" className="border-2 hover:bg-gray-50 dark:hover:bg-gray-800" onClick={() => handleAssignTable(0)}>
+              <Button
+                variant="outline"
+                className="border-2 hover:bg-gray-50 dark:hover:bg-gray-800"
+                onClick={() => handleAssignTable(0)}
+              >
                 <Table className="h-4 w-4 mr-2" />
                 Assign Table
               </Button>
@@ -452,7 +511,11 @@ export default function ReceptionDashboard({
               permissions={permissions}
               requiredPermission="customers:read"
             >
-              <Button variant="outline" className="border-2 hover:bg-gray-50 dark:hover:bg-gray-800" onClick={() => handleCustomerLookup("All Customers")}>
+              <Button
+                variant="outline"
+                className="border-2 hover:bg-gray-50 dark:hover:bg-gray-800"
+                onClick={() => handleCustomerLookup("All Customers")}
+              >
                 <Users className="h-4 w-4 mr-2" />
                 Customer Lookup
               </Button>
@@ -462,7 +525,11 @@ export default function ReceptionDashboard({
               permissions={permissions}
               requiredPermission="payments:process"
             >
-              <Button variant="outline" className="border-2 hover:bg-gray-50 dark:hover:bg-gray-800" onClick={() => handleProcessPayment("ORD-001")}>
+              <Button
+                variant="outline"
+                className="border-2 hover:bg-gray-50 dark:hover:bg-gray-800"
+                onClick={() => handleProcessPayment("ORD-001")}
+              >
                 <CreditCard className="h-4 w-4 mr-2" />
                 Process Payment
               </Button>
@@ -539,7 +606,9 @@ export default function ReceptionDashboard({
                           {getStatusIcon(order.status)}
                           {order.status}
                         </Badge>
-                        <Badge className={getPaymentStatusColor(order.paymentStatus)}>
+                        <Badge
+                          className={getPaymentStatusColor(order.paymentStatus)}
+                        >
                           {order.paymentStatus}
                         </Badge>
                       </div>
@@ -551,7 +620,8 @@ export default function ReceptionDashboard({
 
                     {order.specialRequests && (
                       <div className="mb-3 p-2 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded text-sm">
-                        <strong>Special Requests:</strong> {order.specialRequests}
+                        <strong>Special Requests:</strong>{" "}
+                        {order.specialRequests}
                       </div>
                     )}
 
@@ -589,194 +659,62 @@ export default function ReceptionDashboard({
           </Card>
         </PermissionGuard>
 
-        {/* Enhanced Table Status */}
+        {/* Enhanced Table Management */}
         <PermissionGuard
           permissions={permissions}
           requiredPermission="tables:read"
         >
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Table className="h-5 w-5" />
-                Table Status
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {tables.map((table) => (
-                  <div key={table.number} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-lg">Table {table.number}</span>
-                        <Badge className={getTableStatusColor(table.status)}>
-                          {table.status}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {table.customerName && (
-                      <div className="space-y-2 mb-3">
-                        <div className="font-medium text-gray-900 dark:text-gray-100">
-                          {table.customerName}
-                        </div>
-                        <div className="text-sm text-muted-foreground flex items-center gap-2">
-                          <Phone className="h-3 w-3" />
-                          {table.customerPhone}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          Party of {table.partySize} • Seated: {table.seatedAt}
-                        </div>
-                        {table.orderId && (
-                          <div className="text-sm text-muted-foreground">
-                            Order: {table.orderId}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {table.status === "reserved" && (
-                      <div className="text-sm text-muted-foreground mb-3 p-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded">
-                        Reserved
-                      </div>
-                    )}
-
-                    {table.orderTotal > 0 && (
-                      <div className="text-lg font-semibold text-green-600 dark:text-green-400 mb-3">
-                        ₦{table.orderTotal.toFixed(2)}
-                      </div>
-                    )}
-
-                    <div className="flex gap-2">
-                      {table.status === "available" && (
-                        <PermissionGuard
-                          permissions={permissions}
-                          requiredPermission="tables:update"
-                        >
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleAssignTable(table.number)}
-                            className="flex-1"
-                          >
-                            Assign
-                          </Button>
-                        </PermissionGuard>
-                      )}
-
-                      {table.status === "occupied" && table.customerName && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleCustomerLookup(table.customerName!)}
-                            className="flex-1"
-                          >
-                            Customer Info
-                          </Button>
-                          {table.orderId && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleViewOrderDetails(table.orderId!)}
-                              className="flex-1"
-                            >
-                              View Order
-                            </Button>
-                          )}
-                        </>
-                      )}
-
-                      {table.status === "cleaning" && (
-                        <PermissionGuard
-                          permissions={permissions}
-                          requiredPermission="tables:update"
-                        >
-                          <Button size="sm" variant="outline" className="flex-1">
-                            Mark Clean
-                          </Button>
-                        </PermissionGuard>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <TableManagementGrid
+            businessId={staffSession.business.id}
+            onTableUpdate={(tableId, status) => {
+              // Refresh data when table is updated
+              fetchReceptionData();
+            }}
+            onOrderView={(orderId) => {
+              // Navigate to order details
+              handleViewOrderDetails(orderId);
+            }}
+          />
         </PermissionGuard>
 
-        {/* Enhanced Customer Information */}
+        {/* Enhanced Customer Management */}
         <PermissionGuard
           permissions={permissions}
           requiredPermission="customers:read"
         >
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Customer Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by name or phone..."
-                    className="pl-8"
-                  />
-                </div>
-
-                <div className="space-y-4">
-                  {recentOrders.slice(0, 3).map((order) => (
-                    <div key={order.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-md transition-shadow">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="font-semibold text-gray-900 dark:text-gray-100">
-                          {order.customerName}
-                        </div>
-                        <Badge variant="outline">
-                          Table {order.tableNumber}
-                        </Badge>
-                      </div>
-                      <div className="space-y-2 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-3 w-3" />
-                          {order.customerPhone}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-3 w-3" />
-                          {order.customerEmail}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-3 w-3" />
-                          Order: {order.id}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className={getPaymentStatusColor(order.paymentStatus)}>
-                            {order.paymentStatus}
-                          </Badge>
-                        </div>
-                      </div>
-                      {order.specialRequests && (
-                        <div className="mt-3 p-2 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded text-xs">
-                          <strong>Special Requests:</strong> {order.specialRequests}
-                        </div>
-                      )}
-                      <div className="mt-3 flex gap-2">
-                        <Button size="sm" variant="outline" className="flex-1">
-                          View History
-                        </Button>
-                        <Button size="sm" variant="outline" className="flex-1">
-                          Contact
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <CustomerManagement
+            businessId={staffSession.business.id}
+            onCustomerSelect={(customer) => {
+              // Handle customer selection for order creation
+              console.log("Selected customer:", customer);
+            }}
+            onOrderView={(orderId) => {
+              // Navigate to order details
+              handleViewOrderDetails(orderId);
+            }}
+          />
         </PermissionGuard>
       </div>
+
+      {/* Order Creation Modal */}
+      <ReceptionOrderCreationModal
+        isOpen={isOrderModalOpen}
+        onClose={() => setIsOrderModalOpen(false)}
+        onOrderCreated={handleOrderCreated}
+      />
+
+      {/* Payment Processing Modal */}
+      {selectedOrderForPayment && (
+        <PaymentProcessing
+          order={selectedOrderForPayment}
+          isOpen={isPaymentModalOpen}
+          onClose={() => {
+            setIsPaymentModalOpen(false);
+            setSelectedOrderForPayment(null);
+          }}
+          onPaymentComplete={handlePaymentComplete}
+        />
+      )}
     </div>
   );
 }

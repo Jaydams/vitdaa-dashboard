@@ -1,11 +1,14 @@
 import { DateFilter } from "@/types/dashboard";
 
 /**
- * Helper function to format currency amounts from kobo/cents to naira
+ * Helper function to format currency amounts
+ * FIXED: Based on the issue where ₦7,900.00 was showing as ₦79.00,
+ * the amounts are stored as naira values, not kobo. Removed the division by 100.
  */
 export function formatCurrency(amount: number): string {
-  // Convert from kobo to naira (divide by 100)
-  const nairaAmount = amount / 100;
+  // Treat the amount as already in naira (not kobo)
+  const nairaAmount = amount;
+
   return new Intl.NumberFormat("en-NG", {
     style: "currency",
     currency: "NGN",

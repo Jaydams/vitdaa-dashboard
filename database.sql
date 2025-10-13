@@ -344,8 +344,8 @@ CREATE TABLE public.inventory_transactions (
   CONSTRAINT inventory_transactions_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
   CONSTRAINT inventory_transactions_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.inventory_items(id),
   CONSTRAINT inventory_transactions_supplier_id_fkey FOREIGN KEY (supplier_id) REFERENCES public.suppliers(id),
-  CONSTRAINT inventory_transactions_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
-  CONSTRAINT inventory_transactions_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id)
+  CONSTRAINT inventory_transactions_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
+  CONSTRAINT inventory_transactions_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
 );
 CREATE TABLE public.likes (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -424,6 +424,17 @@ CREATE TABLE public.order_assignments (
   CONSTRAINT order_assignments_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
   CONSTRAINT order_assignments_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id)
 );
+CREATE TABLE public.order_custom_charges (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  order_id uuid NOT NULL,
+  charge_name text NOT NULL,
+  charge_type text NOT NULL CHECK (charge_type = ANY (ARRAY['percentage'::text, 'fixed'::text])),
+  charge_value numeric NOT NULL,
+  calculated_amount integer NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT order_custom_charges_pkey PRIMARY KEY (id),
+  CONSTRAINT order_custom_charges_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
+);
 CREATE TABLE public.order_items (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   order_id uuid NOT NULL,
@@ -442,8 +453,8 @@ CREATE TABLE public.order_items (
   is_bar_item boolean DEFAULT false,
   image_url text,
   CONSTRAINT order_items_pkey PRIMARY KEY (id),
-  CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
   CONSTRAINT order_items_menu_item_id_fkey FOREIGN KEY (menu_item_id) REFERENCES public.menu_items(id),
+  CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
   CONSTRAINT order_items_assigned_to_staff_id_fkey FOREIGN KEY (assigned_to_staff_id) REFERENCES public.staff(id)
 );
 CREATE TABLE public.order_status_history (
@@ -464,7 +475,7 @@ CREATE TABLE public.orders (
   customer_id uuid,
   invoice_no text NOT NULL UNIQUE,
   order_time timestamp with time zone DEFAULT now(),
-  dining_option text NOT NULL CHECK (dining_option = ANY (ARRAY['indoor'::text, 'delivery'::text])),
+  dining_option text NOT NULL CHECK (dining_option = ANY (ARRAY['indoor'::text, 'delivery'::text, 'pickup'::text])),
   table_id uuid,
   takeaway_packs integer DEFAULT 0,
   takeaway_pack_price integer DEFAULT 0,
@@ -480,7 +491,7 @@ CREATE TABLE public.orders (
   service_charge integer NOT NULL,
   total_amount integer NOT NULL,
   payment_method text NOT NULL CHECK (payment_method = ANY (ARRAY['cash'::text, 'wallet'::text, 'card'::text, 'transfer'::text])),
-  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'processing'::text, 'delivered'::text, 'cancelled'::text])),
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'processing'::text, 'delivered'::text, 'completed'::text, 'cancelled'::text])),
   notes text,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
@@ -499,6 +510,9 @@ CREATE TABLE public.orders (
   ready_for_pickup_at timestamp with time zone,
   last_status_update timestamp with time zone DEFAULT now(),
   status_updated_by uuid,
+  vat_rate numeric DEFAULT 7.5,
+  service_charge_rate numeric DEFAULT 2.5,
+  custom_charges_total integer DEFAULT 0,
   CONSTRAINT orders_pkey PRIMARY KEY (id),
   CONSTRAINT orders_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
   CONSTRAINT orders_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id),

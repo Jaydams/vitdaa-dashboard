@@ -21,6 +21,7 @@ import {
   MessageSquare,
   Star,
   Zap,
+  ShoppingCart,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +37,11 @@ import { createClient } from "@/lib/supabase/client";
 import { formatAmount } from "@/helpers/formatAmount";
 import { formatDistanceToNow } from "date-fns";
 import InventoryManager from "./InventoryManager";
+import EnhancedInventoryManager from "./EnhancedInventoryManager";
+import InventoryRequestForm from "./InventoryRequestForm";
+import InventoryRequestsList from "./InventoryRequestsList";
+import InventoryRequestNotifications from "./InventoryRequestNotifications";
+import KitchenOrderProcessor from "./KitchenOrderProcessor";
 
 interface KitchenDashboardProps {
   staffSession: StaffSession;
@@ -101,7 +107,10 @@ export default function KitchenDashboard({
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'orders' | 'inventory'>('orders');
+  const [activeTab, setActiveTab] = useState<
+    "orders" | "inventory" | "requests"
+  >("orders");
+  const [refreshRequestsTrigger, setRefreshRequestsTrigger] = useState(0);
   const [stats, setStats] = useState({
     pendingOrders: 0,
     preparingOrders: 0,
@@ -121,31 +130,43 @@ export default function KitchenDashboard({
     const supabase = createClient();
 
     const channel = supabase
-      .channel('kitchen-orders-realtime')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'orders',
-      }, (payload) => {
-        console.log('Kitchen orders realtime change:', payload);
-        fetchKitchenData();
-      })
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'order_items',
-      }, (payload) => {
-        console.log('Order items realtime change:', payload);
-        fetchKitchenData();
-      })
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'order_status_history',
-      }, (payload) => {
-        console.log('Order status history realtime change:', payload);
-        fetchKitchenData();
-      })
+      .channel("kitchen-orders-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders",
+        },
+        (payload) => {
+          console.log("Kitchen orders realtime change:", payload);
+          fetchKitchenData();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "order_items",
+        },
+        (payload) => {
+          console.log("Order items realtime change:", payload);
+          fetchKitchenData();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "order_status_history",
+        },
+        (payload) => {
+          console.log("Order status history realtime change:", payload);
+          fetchKitchenData();
+        }
+      )
       .subscribe();
 
     return () => {
@@ -156,50 +177,68 @@ export default function KitchenDashboard({
   const fetchKitchenData = async () => {
     try {
       setIsLoading(true);
-      
+
       // Import server actions
-      const { fetchOrders, getOrderStats } = await import('@/actions/order-actions');
-      
+      const { fetchOrders, getOrderStats } = await import(
+        "@/actions/order-actions"
+      );
+
       // Fetch all orders (kitchen staff can see all orders)
       const ordersData = await fetchOrders({ page: 1, perPage: 50 });
-      
+
       // Filter for kitchen items only
-      const kitchenOrders = ordersData.data?.map((order: any) => ({
-        id: order.id,
-        invoice_no: order.invoice_no,
-        customer_name: order.customer_name,
-        table_number: order.table?.table_number,
-        items: order.items?.filter((item: any) => item.is_kitchen_item !== false) || [],
-        total_amount: order.total_amount,
-        status: order.status,
-        created_at: order.created_at,
-        special_instructions: order.notes,
-        priority_level: order.priority_level || 'normal',
-        estimated_completion_time: order.estimated_completion_time,
-        preparation_started_at: order.preparation_started_at,
-        preparation_completed_at: order.preparation_completed_at,
-        kitchen_notes: order.kitchen_notes,
-        assigned_staff: order.assigned_to_staff_id ? {
-          id: order.assigned_to_staff_id,
-          first_name: 'Kitchen',
-          last_name: 'Staff',
-          role: 'kitchen'
-        } : undefined,
-        status_updated_by_staff: order.status_updated_by ? {
-          id: order.status_updated_by,
-          first_name: 'Kitchen',
-          last_name: 'Staff',
-          role: 'kitchen'
-        } : undefined,
-      })).filter((order: any) => order.items.length > 0) || [];
-      
+      const kitchenOrders =
+        ordersData.data
+          ?.map((order: any) => ({
+            id: order.id,
+            invoice_no: order.invoice_no,
+            customer_name: order.customer_name,
+            table_number: order.table?.table_number,
+            items:
+              order.items?.filter(
+                (item: any) => item.is_kitchen_item !== false
+              ) || [],
+            total_amount: order.total_amount,
+            status: order.status,
+            created_at: order.created_at,
+            special_instructions: order.notes,
+            priority_level: order.priority_level || "normal",
+            estimated_completion_time: order.estimated_completion_time,
+            preparation_started_at: order.preparation_started_at,
+            preparation_completed_at: order.preparation_completed_at,
+            kitchen_notes: order.kitchen_notes,
+            assigned_staff: order.assigned_to_staff_id
+              ? {
+                  id: order.assigned_to_staff_id,
+                  first_name: "Kitchen",
+                  last_name: "Staff",
+                  role: "kitchen",
+                }
+              : undefined,
+            status_updated_by_staff: order.status_updated_by
+              ? {
+                  id: order.status_updated_by,
+                  first_name: "Kitchen",
+                  last_name: "Staff",
+                  role: "kitchen",
+                }
+              : undefined,
+          }))
+          .filter((order: any) => order.items.length > 0) || [];
+
       setOrders(kitchenOrders);
-      
+
       // Calculate stats
-      const pending = kitchenOrders.filter((o: KitchenOrder) => o.status === 'pending').length;
-      const preparing = kitchenOrders.filter((o: KitchenOrder) => o.status === 'processing').length;
-      const ready = kitchenOrders.filter((o: KitchenOrder) => o.status === 'ready').length;
-      
+      const pending = kitchenOrders.filter(
+        (o: KitchenOrder) => o.status === "pending"
+      ).length;
+      const preparing = kitchenOrders.filter(
+        (o: KitchenOrder) => o.status === "processing"
+      ).length;
+      const ready = kitchenOrders.filter(
+        (o: KitchenOrder) => o.status === "ready"
+      ).length;
+
       setStats({
         pendingOrders: pending,
         preparingOrders: preparing,
@@ -207,91 +246,160 @@ export default function KitchenDashboard({
         lowStockItems: 0, // Will be updated when inventory is fetched
         totalOrders: kitchenOrders.length,
       });
-      
+
       // Fetch inventory data from existing API
       try {
-        const inventoryResponse = await fetch('/api/inventory/kitchen', {
-          credentials: 'include',
+        const inventoryResponse = await fetch("/api/inventory/kitchen", {
+          credentials: "include",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
         });
-        
+
         if (inventoryResponse.ok) {
           const inventoryData = await inventoryResponse.json();
           setInventory(inventoryData.items || []);
-          setStats(prev => ({
+          setStats((prev) => ({
             ...prev,
-            lowStockItems: (inventoryData.items || []).filter((item: any) => 
-              item.status === 'low_stock' || item.status === 'out_of_stock'
+            lowStockItems: (inventoryData.items || []).filter(
+              (item: any) =>
+                item.status === "low_stock" || item.status === "out_of_stock"
             ).length,
           }));
         }
       } catch (inventoryError) {
-        console.error('Error fetching inventory:', inventoryError);
+        console.error("Error fetching inventory:", inventoryError);
         // Fallback to mock data if API fails
         const mockInventory = [
           {
-            id: '1',
-            name: 'Chicken Breast',
+            id: "1",
+            name: "Chicken Breast",
             current_stock: 5,
             minimum_stock: 10,
-            unit: 'kg',
-            category: 'Meat',
+            unit: "kg",
+            category: "Meat",
             last_updated: new Date().toISOString(),
-            status: 'low_stock' as const,
+            status: "low_stock" as const,
           },
           {
-            id: '2',
-            name: 'Rice',
+            id: "2",
+            name: "Rice",
             current_stock: 2,
             minimum_stock: 5,
-            unit: 'kg',
-            category: 'Grains',
+            unit: "kg",
+            category: "Grains",
             last_updated: new Date().toISOString(),
-            status: 'low_stock' as const,
+            status: "low_stock" as const,
           },
         ];
-        
+
         setInventory(mockInventory);
-        setStats(prev => ({
+        setStats((prev) => ({
           ...prev,
           lowStockItems: mockInventory.length,
         }));
       }
     } catch (error) {
-      console.error('Error fetching kitchen data:', error);
-      toast.error('Failed to load kitchen data');
+      console.error("Error fetching kitchen data:", error);
+      toast.error("Failed to load kitchen data");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const updateOrderStatus = async (orderId: string, status: string, notes?: string) => {
+  const updateOrderStatus = async (
+    orderId: string,
+    status: string,
+    notes?: string
+  ) => {
     try {
       // Import server action
-      const { updateOrderStatus: updateOrderStatusAction } = await import('@/actions/order-actions');
-      
+      const { updateOrderStatus: updateOrderStatusAction } = await import(
+        "@/actions/order-actions"
+      );
+
       // Update order status
       await updateOrderStatusAction(orderId, status as any);
-      
+
+      // Log staff activity
+      await logStaffActivity({
+        activity_type: "order_updated",
+        activity_details: {
+          resource_id: orderId,
+          resource_type: "order",
+          action_duration: 0,
+          success: true,
+          additional_data: {
+            new_status: status,
+            notes: notes,
+          },
+        },
+        performance_metrics: {
+          response_time: Date.now(),
+        },
+      });
+
       toast.success(`Order status updated to ${status}`);
       fetchKitchenData();
     } catch (error) {
-      console.error('Error updating order status:', error);
-      toast.error('Failed to update order status');
+      console.error("Error updating order status:", error);
+      toast.error("Failed to update order status");
     }
   };
 
-  const updateItemStatus = async (itemId: string, status: string, notes?: string) => {
+  const updateItemStatus = async (
+    orderId: string,
+    itemId: string,
+    status: string,
+    notes?: string
+  ) => {
     try {
-      // For now, we'll just show a success message
-      // In a real implementation, you'd update the item status in the database
-      toast.success(`Item status updated to ${status}`);
-      fetchKitchenData();
+      // Update item status in database
+      const response = await fetch(
+        `/api/orders/${orderId}/items/${itemId}/status`,
+        {
+          method: "PUT",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            status,
+            notes,
+            updated_by_staff_id: staffSession.staff.id,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        // Log staff activity
+        await logStaffActivity({
+          activity_type: "order_item_updated",
+          activity_details: {
+            resource_id: itemId,
+            resource_type: "order_item",
+            action_duration: 0,
+            success: true,
+            additional_data: {
+              order_id: orderId,
+              new_status: status,
+              notes: notes,
+            },
+          },
+          performance_metrics: {
+            response_time: Date.now(),
+          },
+        });
+
+        toast.success(`Item status updated to ${status}`);
+        fetchKitchenData();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to update item status");
+      }
     } catch (error) {
-      console.error('Error updating item status:', error);
-      toast.error('Failed to update item status');
+      console.error("Error updating item status:", error);
+      toast.error("Failed to update item status");
     }
   };
 
@@ -299,23 +407,181 @@ export default function KitchenDashboard({
     try {
       // For now, we'll just show a success message
       // In a real implementation, you'd add kitchen notes to the database
-      toast.success('Kitchen notes added');
+      toast.success("Kitchen notes added");
       fetchKitchenData();
     } catch (error) {
-      console.error('Error adding kitchen notes:', error);
-      toast.error('Failed to add kitchen notes');
+      console.error("Error adding kitchen notes:", error);
+      toast.error("Failed to add kitchen notes");
     }
   };
 
   const setOrderPriority = async (orderId: string, priority: string) => {
     try {
-      // For now, we'll just show a success message
-      // In a real implementation, you'd update the order priority in the database
-      toast.success(`Order priority set to ${priority}`);
-      fetchKitchenData();
+      // Update order priority in database
+      const response = await fetch(`/api/orders/${orderId}/priority`, {
+        method: "PUT",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          priority_level: priority,
+          updated_by_staff_id: staffSession.staff.id,
+        }),
+      });
+
+      if (response.ok) {
+        // Log staff activity
+        await logStaffActivity({
+          activity_type: "order_priority_updated",
+          activity_details: {
+            resource_id: orderId,
+            resource_type: "order",
+            action_duration: 0,
+            success: true,
+            additional_data: {
+              new_priority: priority,
+            },
+          },
+          performance_metrics: {
+            response_time: Date.now(),
+          },
+        });
+
+        toast.success(`Order priority set to ${priority}`);
+        fetchKitchenData();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to set order priority");
+      }
     } catch (error) {
-      console.error('Error setting order priority:', error);
-      toast.error('Failed to set order priority');
+      console.error("Error setting order priority:", error);
+      toast.error("Failed to set order priority");
+    }
+  };
+
+  const startPreparation = async (orderId: string) => {
+    try {
+      // Update order with preparation start time
+      const response = await fetch(`/api/orders/${orderId}/preparation/start`, {
+        method: "PUT",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          preparation_started_at: new Date().toISOString(),
+          assigned_to_staff_id: staffSession.staff.id,
+        }),
+      });
+
+      if (response.ok) {
+        // Log staff activity
+        await logStaffActivity({
+          activity_type: "preparation_started",
+          activity_details: {
+            resource_id: orderId,
+            resource_type: "order",
+            action_duration: 0,
+            success: true,
+            additional_data: {
+              started_at: new Date().toISOString(),
+            },
+          },
+          performance_metrics: {
+            response_time: Date.now(),
+          },
+        });
+
+        toast.success("Preparation started");
+        fetchKitchenData();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to start preparation");
+      }
+    } catch (error) {
+      console.error("Error starting preparation:", error);
+      toast.error("Failed to start preparation");
+    }
+  };
+
+  const completePreparation = async (orderId: string) => {
+    try {
+      // Update order with preparation completion time
+      const response = await fetch(
+        `/api/orders/${orderId}/preparation/complete`,
+        {
+          method: "PUT",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            preparation_completed_at: new Date().toISOString(),
+            completed_by_staff_id: staffSession.staff.id,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        // Log staff activity
+        await logStaffActivity({
+          activity_type: "preparation_completed",
+          activity_details: {
+            resource_id: orderId,
+            resource_type: "order",
+            action_duration: 0,
+            success: true,
+            additional_data: {
+              completed_at: new Date().toISOString(),
+            },
+          },
+          performance_metrics: {
+            response_time: Date.now(),
+          },
+        });
+
+        toast.success("Preparation completed");
+        fetchKitchenData();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to complete preparation");
+      }
+    } catch (error) {
+      console.error("Error completing preparation:", error);
+      toast.error("Failed to complete preparation");
+    }
+  };
+
+  const logStaffActivity = async (activityData: {
+    activity_type: string;
+    activity_details: {
+      resource_id: string;
+      resource_type: string;
+      action_duration: number;
+      success: boolean;
+      additional_data?: any;
+    };
+    performance_metrics: {
+      response_time: number;
+    };
+  }) => {
+    try {
+      await fetch("/api/staff/activity/log", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          staff_id: staffSession.staff.id,
+          staff_session_id: staffSession.sessionRecord.id,
+          ...activityData,
+        }),
+      });
+    } catch (error) {
+      console.error("Error logging staff activity:", error);
+      // Don't show error to user as this is background logging
     }
   };
 
@@ -323,10 +589,10 @@ export default function KitchenDashboard({
     try {
       // Update inventory in the database
       const response = await fetch(`/api/inventory/items/${itemId}`, {
-        method: 'PUT',
-        credentials: 'include',
+        method: "PUT",
+        credentials: "include",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           current_quantity: newStock,
@@ -335,84 +601,134 @@ export default function KitchenDashboard({
 
       if (response.ok) {
         // Update local state
-        setInventory(prev => prev.map(item => 
-          item.id === itemId 
-            ? { 
-                ...item, 
-                current_stock: newStock,
-                status: newStock === 0 ? 'out_of_stock' : 
-                        newStock <= item.minimum_stock ? 'low_stock' : 'in_stock',
-                last_updated: new Date().toISOString()
-              }
-            : item
-        ));
-        
+        setInventory((prev) =>
+          prev.map((item) =>
+            item.id === itemId
+              ? {
+                  ...item,
+                  current_stock: newStock,
+                  status:
+                    newStock === 0
+                      ? "out_of_stock"
+                      : newStock <= item.minimum_stock
+                      ? "low_stock"
+                      : "in_stock",
+                  last_updated: new Date().toISOString(),
+                }
+              : item
+          )
+        );
+
         // Update stats
-        setStats(prev => ({
+        setStats((prev) => ({
           ...prev,
-          lowStockItems: inventory.filter(item => 
-            item.current_stock <= item.minimum_stock
-          ).length
+          lowStockItems: inventory.filter(
+            (item) => item.current_stock <= item.minimum_stock
+          ).length,
         }));
-        
-        toast.success('Inventory updated successfully');
+
+        toast.success("Inventory updated successfully");
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Failed to update inventory');
+        toast.error(error.error || "Failed to update inventory");
       }
     } catch (error) {
-      console.error('Error updating inventory:', error);
-      toast.error('Failed to update inventory');
+      console.error("Error updating inventory:", error);
+      toast.error("Failed to update inventory");
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent': return 'bg-red-100 text-red-800 border-red-200';
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'normal': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'low': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case "urgent":
+        return "bg-red-100 text-red-800 border-red-200";
+      case "high":
+        return "bg-orange-100 text-orange-800 border-orange-200";
+      case "normal":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "low":
+        return "bg-gray-100 text-gray-800 border-gray-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'processing': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'ready': return 'bg-green-100 text-green-800 border-green-200';
-      case 'delivered': return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case "pending":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "processing":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "ready":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "delivered":
+        return "bg-gray-100 text-gray-800 border-gray-200";
+      case "cancelled":
+        return "bg-red-100 text-red-800 border-red-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         order.invoice_no.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-    const matchesPriority = priorityFilter === 'all' || order.priority_level === priorityFilter;
-    
+  const filteredOrders = orders.filter((order) => {
+    const matchesSearch =
+      order.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.invoice_no.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || order.status === statusFilter;
+    const matchesPriority =
+      priorityFilter === "all" || order.priority_level === priorityFilter;
+
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
-  const pendingOrders = filteredOrders.filter(order => order.status === 'pending');
-  const processingOrders = filteredOrders.filter(order => order.status === 'processing');
-  const readyOrders = filteredOrders.filter(order => order.status === 'ready');
+  const pendingOrders = filteredOrders.filter(
+    (order) => order.status === "pending"
+  );
+  const processingOrders = filteredOrders.filter(
+    (order) => order.status === "processing"
+  );
+  const readyOrders = filteredOrders.filter(
+    (order) => order.status === "ready"
+  );
 
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header with Stats - Responsive */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div className="min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-bold truncate">Kitchen Dashboard</h1>
-          <p className="text-sm sm:text-base text-gray-600 truncate">Manage food preparation and kitchen operations</p>
+          <h1 className="text-2xl sm:text-3xl font-bold truncate">
+            Kitchen Dashboard
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600 truncate">
+            Manage food preparation and kitchen operations
+          </p>
         </div>
-        <Button onClick={fetchKitchenData} disabled={isLoading} className="w-full sm:w-auto">
-          <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-          <span className="hidden sm:inline">Refresh</span>
-          <span className="sm:hidden">Refresh Data</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <PermissionGuard
+            permissions={permissions}
+            requiredPermission="inventory:request"
+          >
+            <InventoryRequestNotifications
+              staffSession={staffSession}
+              onViewRequest={(requestId) => {
+                setActiveTab("requests");
+                // Could add logic to highlight specific request
+              }}
+            />
+          </PermissionGuard>
+          <Button
+            onClick={fetchKitchenData}
+            disabled={isLoading}
+            className="w-full sm:w-auto"
+          >
+            <RefreshCw
+              className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
+            />
+            <span className="hidden sm:inline">Refresh</span>
+            <span className="sm:hidden">Refresh Data</span>
+          </Button>
+        </div>
       </div>
 
       {/* Quick Stats - Responsive Grid */}
@@ -531,29 +847,39 @@ export default function KitchenDashboard({
       {/* Tab Navigation */}
       <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
         <Button
-          variant={activeTab === 'orders' ? 'default' : 'ghost'}
-          onClick={() => setActiveTab('orders')}
+          variant={activeTab === "orders" ? "default" : "ghost"}
+          onClick={() => setActiveTab("orders")}
           className="flex-1"
         >
           <ChefHat className="w-4 h-4 mr-2" />
           Orders
         </Button>
         <Button
-          variant={activeTab === 'inventory' ? 'default' : 'ghost'}
-          onClick={() => setActiveTab('inventory')}
+          variant={activeTab === "inventory" ? "default" : "ghost"}
+          onClick={() => setActiveTab("inventory")}
           className="flex-1"
         >
           <Package className="w-4 h-4 mr-2" />
           Inventory
         </Button>
+        <Button
+          variant={activeTab === "requests" ? "default" : "ghost"}
+          onClick={() => setActiveTab("requests")}
+          className="flex-1"
+        >
+          <ShoppingCart className="w-4 h-4 mr-2" />
+          Requests
+        </Button>
       </div>
 
-      {activeTab === 'orders' && (
+      {activeTab === "orders" && (
         <>
           {/* Filters and Search - Responsive */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg sm:text-xl">Order Management</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">
+                Order Management
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col lg:flex-row gap-4">
@@ -599,110 +925,54 @@ export default function KitchenDashboard({
         </>
       )}
 
-      {activeTab === 'orders' && (
-        <>
-          {/* Orders Sections */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Pending Orders */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Clock className="w-5 h-5 mr-2 text-yellow-600" />
-                  Pending Orders ({pendingOrders.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {pendingOrders.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">No pending orders</p>
-                ) : (
-                  pendingOrders.map((order) => (
-                    <OrderCard
-                      key={order.id}
-                      order={order}
-                      onStatusUpdate={updateOrderStatus}
-                      onItemStatusUpdate={updateItemStatus}
-                      onAddNotes={addKitchenNotes}
-                      onSetPriority={setOrderPriority}
-                      getPriorityColor={getPriorityColor}
-                      getStatusColor={getStatusColor}
-                    />
-                  ))
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Processing Orders */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <ChefHat className="w-5 h-5 mr-2 text-blue-600" />
-                  In Progress ({processingOrders.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {processingOrders.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">No orders in progress</p>
-                ) : (
-                  processingOrders.map((order) => (
-                    <OrderCard
-                      key={order.id}
-                      order={order}
-                      onStatusUpdate={updateOrderStatus}
-                      onItemStatusUpdate={updateItemStatus}
-                      onAddNotes={addKitchenNotes}
-                      onSetPriority={setOrderPriority}
-                      getPriorityColor={getPriorityColor}
-                      getStatusColor={getStatusColor}
-                    />
-                  ))
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Ready Orders */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <CheckCircle className="w-5 h-5 mr-2 text-green-600" />
-                  Ready Orders ({readyOrders.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {readyOrders.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">No ready orders</p>
-                ) : (
-                  readyOrders.map((order) => (
-                    <OrderCard
-                      key={order.id}
-                      order={order}
-                      onStatusUpdate={updateOrderStatus}
-                      onItemStatusUpdate={updateItemStatus}
-                      onAddNotes={addKitchenNotes}
-                      onSetPriority={setOrderPriority}
-                      getPriorityColor={getPriorityColor}
-                      getStatusColor={getStatusColor}
-                    />
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </>
+      {activeTab === "orders" && (
+        <PermissionGuard
+          permissions={permissions}
+          requiredPermission="orders:read"
+        >
+          <KitchenOrderProcessor
+            orders={filteredOrders}
+            onStatusUpdate={updateOrderStatus}
+            onItemStatusUpdate={updateItemStatus}
+            onAddNotes={addKitchenNotes}
+            onSetPriority={setOrderPriority}
+            onStartPreparation={startPreparation}
+            onCompletePreparation={completePreparation}
+          />
+        </PermissionGuard>
       )}
 
-      {activeTab === 'inventory' && (
+      {activeTab === "inventory" && (
         <PermissionGuard
           permissions={permissions}
           requiredPermission="inventory:update"
         >
-          <InventoryManager
-            inventory={inventory}
+          <EnhancedInventoryManager
+            staffSession={staffSession}
             onInventoryUpdate={handleInventoryUpdate}
           />
         </PermissionGuard>
       )}
 
-
+      {activeTab === "requests" && (
+        <PermissionGuard
+          permissions={permissions}
+          requiredPermission="inventory:request"
+        >
+          <div className="space-y-6">
+            <InventoryRequestForm
+              staffSession={staffSession}
+              onRequestSubmitted={() =>
+                setRefreshRequestsTrigger((prev) => prev + 1)
+              }
+            />
+            <InventoryRequestsList
+              staffSession={staffSession}
+              refreshTrigger={refreshRequestsTrigger}
+            />
+          </div>
+        </PermissionGuard>
+      )}
     </div>
   );
 }
@@ -762,7 +1032,9 @@ function OrderCard({
           )}
         </div>
         <div className="flex flex-col items-end gap-1">
-          <Badge className={`text-xs ${getPriorityColor(order.priority_level)}`}>
+          <Badge
+            className={`text-xs ${getPriorityColor(order.priority_level)}`}
+          >
             {order.priority_level}
           </Badge>
           <Badge className={`text-xs ${getStatusColor(order.status)}`}>
@@ -774,11 +1046,15 @@ function OrderCard({
       {/* Order Items */}
       <div className="space-y-2 mb-3">
         {order.items
-          .filter(item => item.is_kitchen_item)
+          .filter((item) => item.is_kitchen_item)
           .map((item) => (
-            <div key={item.id} className="flex justify-between items-center text-sm">
+            <div
+              key={item.id}
+              className="flex justify-between items-center text-sm"
+            >
               <div className="flex-1">
-                <span className="font-medium">{item.quantity}x</span> {item.menu_item_name}
+                <span className="font-medium">{item.quantity}x</span>{" "}
+                {item.menu_item_name}
                 {item.special_instructions && (
                   <p className="text-xs text-gray-600 italic">
                     Note: {item.special_instructions}
@@ -787,7 +1063,9 @@ function OrderCard({
               </div>
               <div className="flex items-center gap-1">
                 <Badge
-                  variant={item.item_status === 'ready' ? 'default' : 'secondary'}
+                  variant={
+                    item.item_status === "ready" ? "default" : "secondary"
+                  }
                   className="text-xs"
                 >
                   {item.item_status}
@@ -796,15 +1074,26 @@ function OrderCard({
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    const nextStatus = item.item_status === 'pending' ? 'preparing' : 
-                                     item.item_status === 'preparing' ? 'ready' : 'served';
+                    const nextStatus =
+                      item.item_status === "pending"
+                        ? "preparing"
+                        : item.item_status === "preparing"
+                        ? "ready"
+                        : "served";
                     handleItemStatusUpdate(item.id, nextStatus);
                   }}
-                  disabled={item.item_status === 'served' || item.item_status === 'cancelled'}
+                  disabled={
+                    item.item_status === "served" ||
+                    item.item_status === "cancelled"
+                  }
                 >
-                  {item.item_status === 'pending' ? 'Start' :
-                   item.item_status === 'preparing' ? 'Ready' :
-                   item.item_status === 'ready' ? 'Served' : 'Done'}
+                  {item.item_status === "pending"
+                    ? "Start"
+                    : item.item_status === "preparing"
+                    ? "Ready"
+                    : item.item_status === "ready"
+                    ? "Served"
+                    : "Done"}
                 </Button>
               </div>
             </div>
@@ -825,8 +1114,8 @@ function OrderCard({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => handleStatusUpdate('ready')}
-            disabled={order.status === 'ready' || order.status === 'delivered'}
+            onClick={() => handleStatusUpdate("ready")}
+            disabled={order.status === "ready" || order.status === "delivered"}
           >
             <CheckCircle className="w-3 h-3 mr-1" />
             Ready
@@ -835,11 +1124,13 @@ function OrderCard({
 
         {/* Priority Controls */}
         <div className="flex gap-1">
-          {['low', 'normal', 'high', 'urgent'].map((priority) => (
+          {["low", "normal", "high", "urgent"].map((priority) => (
             <Button
               key={priority}
               size="sm"
-              variant={order.priority_level === priority ? 'default' : 'outline'}
+              variant={
+                order.priority_level === priority ? "default" : "outline"
+              }
               onClick={() => handleSetPriority(priority)}
               className="text-xs"
             >
@@ -873,16 +1164,26 @@ function OrderCard({
           <div className="mt-3 pt-3 border-t space-y-2 text-xs">
             <div className="flex justify-between">
               <span>Total Amount:</span>
-              <span className="font-medium">{formatAmount(order.total_amount)}</span>
+              <span className="font-medium">
+                {formatAmount(order.total_amount)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span>Created:</span>
-              <span>{formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}</span>
+              <span>
+                {formatDistanceToNow(new Date(order.created_at), {
+                  addSuffix: true,
+                })}
+              </span>
             </div>
             {order.estimated_completion_time && (
               <div className="flex justify-between">
                 <span>Estimated Ready:</span>
-                <span>{new Date(order.estimated_completion_time).toLocaleTimeString()}</span>
+                <span>
+                  {new Date(
+                    order.estimated_completion_time
+                  ).toLocaleTimeString()}
+                </span>
               </div>
             )}
             {order.kitchen_notes && (
@@ -894,7 +1195,9 @@ function OrderCard({
             {order.special_instructions && (
               <div>
                 <span className="font-medium">Special Instructions:</span>
-                <p className="text-gray-600 mt-1">{order.special_instructions}</p>
+                <p className="text-gray-600 mt-1">
+                  {order.special_instructions}
+                </p>
               </div>
             )}
           </div>

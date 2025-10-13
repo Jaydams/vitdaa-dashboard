@@ -12,6 +12,13 @@ export interface DateFilter {
   endDate?: Date;
 }
 
+// General dashboard filter interface
+export interface DashboardFilter {
+  dateFilter: DateFilter;
+  statusFilter?: string[];
+  searchQuery?: string;
+}
+
 // Sales metrics
 export interface SalesMetrics {
   today: number;

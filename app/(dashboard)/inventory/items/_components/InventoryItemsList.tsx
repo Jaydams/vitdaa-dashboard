@@ -1,14 +1,15 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Package, 
-  Plus, 
-  Eye,
-  Edit
-} from "lucide-react";
+import { Package, Plus, Eye, Edit, Download, FileText } from "lucide-react";
 import Link from "next/link";
 import { AddItemModal } from "./AddItemModal";
 
@@ -36,16 +37,71 @@ interface InventoryItemsListProps {
   searchParams: any;
 }
 
-export function InventoryItemsList({ 
-  items, 
-  count, 
-  page, 
-  totalPages, 
-  searchParams 
+export function InventoryItemsList({
+  items,
+  count,
+  page,
+  totalPages,
+  searchParams,
 }: InventoryItemsListProps) {
+  const generateCSVContent = (items: InventoryItem[]) => {
+    const headers = [
+      "Name",
+      "SKU",
+      "Description",
+      "Category",
+      "Current Stock",
+      "Minimum Stock",
+      "Unit of Measure",
+      "Unit Cost",
+      "Location",
+      "Expiry Date",
+      "Status",
+    ];
+
+    const rows = items.map((item) => {
+      const stockStatus = getStockStatus(item);
+      return [
+        item.name,
+        item.sku || "",
+        item.description || "",
+        item.category?.name || "",
+        item.current_stock.toString(),
+        item.minimum_stock.toString(),
+        item.unit_of_measure,
+        item.unit_cost.toString(),
+        item.location || "",
+        item.expiry_date || "",
+        stockStatus.status,
+      ];
+    });
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((field) => `"${field}"`).join(","))
+      .join("\n");
+
+    return csvContent;
+  };
+
+  const downloadCSV = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", filename);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   const getStockStatus = (item: InventoryItem) => {
-    if (item.current_stock <= 0) return { status: "Out of Stock", variant: "destructive" as const };
-    if (item.current_stock <= item.minimum_stock) return { status: "Low Stock", variant: "secondary" as const };
+    if (item.current_stock <= 0)
+      return { status: "Out of Stock", variant: "destructive" as const };
+    if (item.current_stock <= item.minimum_stock)
+      return { status: "Low Stock", variant: "secondary" as const };
     return { status: "In Stock", variant: "default" as const };
   };
 
@@ -53,14 +109,22 @@ export function InventoryItemsList({
     if (!item.expiry_date) return null;
     const expiryDate = new Date(item.expiry_date);
     const today = new Date();
-    const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (daysUntilExpiry < 0) return { status: "Expired", variant: "destructive" as const };
-    if (daysUntilExpiry <= 7) return { status: "Expiring Soon", variant: "secondary" as const };
+    const daysUntilExpiry = Math.ceil(
+      (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    if (daysUntilExpiry < 0)
+      return { status: "Expired", variant: "destructive" as const };
+    if (daysUntilExpiry <= 7)
+      return { status: "Expiring Soon", variant: "secondary" as const };
     return null;
   };
 
-  const hasFilters = searchParams.search || searchParams.category || searchParams.lowStock || searchParams.expiring;
+  const hasFilters =
+    searchParams.search ||
+    searchParams.category ||
+    searchParams.lowStock ||
+    searchParams.expiring;
 
   return (
     <div className="space-y-6">
@@ -71,19 +135,32 @@ export function InventoryItemsList({
             Manage your inventory items and stock levels
           </p>
         </div>
-        <AddItemModal onItemAdded={() => {
-          // This will trigger a re-render when an item is added
-          window.location.reload();
-        }} />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              // Export to CSV
+              const csvContent = generateCSVContent(items);
+              downloadCSV(csvContent, "inventory-items.csv");
+            }}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
+          <AddItemModal
+            onItemAdded={() => {
+              // This will trigger a re-render when an item is added
+              window.location.reload();
+            }}
+          />
+        </div>
       </div>
 
       {/* Items List */}
       <Card>
         <CardHeader>
           <CardTitle>Inventory Items</CardTitle>
-          <CardDescription>
-            {count} items found
-          </CardDescription>
+          <CardDescription>{count} items found</CardDescription>
         </CardHeader>
         <CardContent>
           {items.length === 0 ? (
@@ -91,15 +168,16 @@ export function InventoryItemsList({
               <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">No items found</h3>
               <p className="text-muted-foreground mb-4">
-                {hasFilters 
-                  ? "Try adjusting your filters" 
-                  : "Get started by adding your first inventory item"
-                }
+                {hasFilters
+                  ? "Try adjusting your filters"
+                  : "Get started by adding your first inventory item"}
               </p>
               {!hasFilters && (
-                <AddItemModal onItemAdded={() => {
-                  window.location.reload();
-                }} />
+                <AddItemModal
+                  onItemAdded={() => {
+                    window.location.reload();
+                  }}
+                />
               )}
             </div>
           ) : (
@@ -109,7 +187,10 @@ export function InventoryItemsList({
                 const expiryStatus = getExpiryStatus(item);
 
                 return (
-                  <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between p-4 border rounded-lg"
+                  >
                     <div className="flex-1">
                       <div className="flex items-center gap-3">
                         <div>
@@ -131,7 +212,7 @@ export function InventoryItemsList({
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-4">
                       <div className="text-right">
                         <p className="font-medium">
@@ -141,7 +222,7 @@ export function InventoryItemsList({
                           Min: {item.minimum_stock} | Cost: ₦{item.unit_cost}
                         </p>
                       </div>
-                      
+
                       <div className="flex flex-col gap-1">
                         <Badge variant={stockStatus.variant}>
                           {stockStatus.status}
@@ -152,7 +233,7 @@ export function InventoryItemsList({
                           </Badge>
                         )}
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
                         <Link href={`/inventory/items/${item.id}`}>
                           <Button variant="outline" size="sm">
@@ -180,14 +261,24 @@ export function InventoryItemsList({
               </p>
               <div className="flex gap-2">
                 {page > 1 && (
-                  <Link href={`?${new URLSearchParams({ ...searchParams, page: (page - 1).toString() })}`}>
+                  <Link
+                    href={`?${new URLSearchParams({
+                      ...searchParams,
+                      page: (page - 1).toString(),
+                    })}`}
+                  >
                     <Button variant="outline" size="sm">
                       Previous
                     </Button>
                   </Link>
                 )}
                 {page < totalPages && (
-                  <Link href={`?${new URLSearchParams({ ...searchParams, page: (page + 1).toString() })}`}>
+                  <Link
+                    href={`?${new URLSearchParams({
+                      ...searchParams,
+                      page: (page + 1).toString(),
+                    })}`}
+                  >
                     <Button variant="outline" size="sm">
                       Next
                     </Button>

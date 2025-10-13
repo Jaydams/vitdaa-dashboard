@@ -67,7 +67,7 @@ function SalesOverview({ data, isLoading, error, filter }: SalesOverviewProps) {
         // Default cards for no filter or standard filters
         {
           icon: <HiOutlineSquare3Stack3D />,
-          title: "Today Orders",
+          title: "Today Sales",
           value: getSafeValue(data?.today),
           className: "bg-teal-600",
         },
