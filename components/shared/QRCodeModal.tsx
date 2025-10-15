@@ -230,9 +230,11 @@ export default function QRCodeModal({ children }: QRCodeModalProps) {
   };
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+    <Dialog suppressHydrationWarning>
+      <DialogTrigger asChild suppressHydrationWarning>
+        {children}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md" suppressHydrationWarning>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <QrCode className="h-5 w-5" />

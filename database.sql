@@ -178,6 +178,21 @@ CREATE TABLE public.customers (
   CONSTRAINT customers_pkey PRIMARY KEY (id),
   CONSTRAINT customers_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
 );
+CREATE TABLE public.dashboard_events (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  business_id uuid NOT NULL,
+  type text NOT NULL,
+  payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+  timestamp timestamp with time zone NOT NULL DEFAULT now(),
+  source_staff_id uuid,
+  target_dashboards ARRAY NOT NULL DEFAULT '{}'::text[],
+  priority text NOT NULL DEFAULT 'normal'::text CHECK (priority = ANY (ARRAY['low'::text, 'normal'::text, 'high'::text, 'urgent'::text])),
+  processed_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT dashboard_events_pkey PRIMARY KEY (id),
+  CONSTRAINT dashboard_events_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
+  CONSTRAINT dashboard_events_source_staff_id_fkey FOREIGN KEY (source_staff_id) REFERENCES public.staff(id)
+);
 CREATE TABLE public.delivery_locations (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   business_id uuid,
@@ -323,6 +338,41 @@ CREATE TABLE public.inventory_reports (
   CONSTRAINT inventory_reports_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
   CONSTRAINT inventory_reports_generated_by_fkey FOREIGN KEY (generated_by) REFERENCES public.staff(id)
 );
+CREATE TABLE public.inventory_request_items (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  request_id uuid NOT NULL,
+  inventory_item_id uuid NOT NULL,
+  requested_quantity integer NOT NULL CHECK (requested_quantity > 0),
+  approved_quantity integer CHECK (approved_quantity IS NULL OR approved_quantity >= 0),
+  estimated_unit_cost numeric DEFAULT 0,
+  approved_unit_cost numeric,
+  supplier_id uuid,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT inventory_request_items_pkey PRIMARY KEY (id),
+  CONSTRAINT inventory_request_items_request_id_fkey FOREIGN KEY (request_id) REFERENCES public.inventory_requests(id),
+  CONSTRAINT inventory_request_items_inventory_item_id_fkey FOREIGN KEY (inventory_item_id) REFERENCES public.inventory_items(id),
+  CONSTRAINT inventory_request_items_supplier_id_fkey FOREIGN KEY (supplier_id) REFERENCES public.suppliers(id)
+);
+CREATE TABLE public.inventory_requests (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  business_id uuid NOT NULL,
+  requested_by_staff_id uuid NOT NULL,
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'approved'::text, 'denied'::text, 'partially_approved'::text])),
+  urgency_level text NOT NULL DEFAULT 'normal'::text CHECK (urgency_level = ANY (ARRAY['low'::text, 'normal'::text, 'high'::text, 'urgent'::text])),
+  justification text,
+  total_estimated_cost numeric DEFAULT 0,
+  admin_notes text,
+  approved_by_admin_id uuid,
+  approved_at timestamp with time zone,
+  denied_reason text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT inventory_requests_pkey PRIMARY KEY (id),
+  CONSTRAINT inventory_requests_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
+  CONSTRAINT inventory_requests_requested_by_staff_id_fkey FOREIGN KEY (requested_by_staff_id) REFERENCES public.staff(id),
+  CONSTRAINT inventory_requests_approved_by_admin_id_fkey FOREIGN KEY (approved_by_admin_id) REFERENCES public.business_owner(id)
+);
 CREATE TABLE public.inventory_transactions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   business_id uuid NOT NULL,
@@ -391,6 +441,19 @@ CREATE TABLE public.menu_items (
   CONSTRAINT menu_items_pkey PRIMARY KEY (id),
   CONSTRAINT menu_items_menu_id_fkey FOREIGN KEY (menu_id) REFERENCES public.menu(id)
 );
+CREATE TABLE public.notification_deliveries (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  notification_id uuid NOT NULL,
+  staff_id uuid NOT NULL,
+  staff_name text NOT NULL,
+  staff_role text NOT NULL,
+  delivered_at timestamp with time zone DEFAULT now(),
+  is_read boolean NOT NULL DEFAULT false,
+  read_at timestamp with time zone,
+  CONSTRAINT notification_deliveries_pkey PRIMARY KEY (id),
+  CONSTRAINT notification_deliveries_notification_id_fkey FOREIGN KEY (notification_id) REFERENCES public.realtime_notifications(id),
+  CONSTRAINT notification_deliveries_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id)
+);
 CREATE TABLE public.notifications (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   business_id uuid NOT NULL,
@@ -410,6 +473,23 @@ CREATE TABLE public.notifications (
   CONSTRAINT notifications_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
   CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
   CONSTRAINT notifications_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id)
+);
+CREATE TABLE public.offline_action_queue (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  staff_id uuid NOT NULL,
+  business_id uuid NOT NULL,
+  action_type text NOT NULL,
+  payload jsonb NOT NULL,
+  retry_count integer NOT NULL DEFAULT 0,
+  max_retries integer NOT NULL DEFAULT 3,
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'processing'::text, 'completed'::text, 'failed'::text])),
+  error_message text,
+  created_at timestamp with time zone DEFAULT now(),
+  processed_at timestamp with time zone,
+  expires_at timestamp with time zone DEFAULT (now() + '24:00:00'::interval),
+  CONSTRAINT offline_action_queue_pkey PRIMARY KEY (id),
+  CONSTRAINT offline_action_queue_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
+  CONSTRAINT offline_action_queue_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
 );
 CREATE TABLE public.order_assignments (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -452,9 +532,13 @@ CREATE TABLE public.order_items (
   is_kitchen_item boolean DEFAULT true,
   is_bar_item boolean DEFAULT false,
   image_url text,
+  preparation_time integer,
+  preparation_notes text,
+  updated_by_staff_id uuid,
   CONSTRAINT order_items_pkey PRIMARY KEY (id),
   CONSTRAINT order_items_menu_item_id_fkey FOREIGN KEY (menu_item_id) REFERENCES public.menu_items(id),
   CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT order_items_updated_by_staff_id_fkey FOREIGN KEY (updated_by_staff_id) REFERENCES public.staff(id),
   CONSTRAINT order_items_assigned_to_staff_id_fkey FOREIGN KEY (assigned_to_staff_id) REFERENCES public.staff(id)
 );
 CREATE TABLE public.order_status_history (
@@ -513,10 +597,13 @@ CREATE TABLE public.orders (
   vat_rate numeric DEFAULT 7.5,
   service_charge_rate numeric DEFAULT 2.5,
   custom_charges_total integer DEFAULT 0,
+  preparation_duration integer,
+  completed_by_staff_id uuid,
   CONSTRAINT orders_pkey PRIMARY KEY (id),
   CONSTRAINT orders_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
   CONSTRAINT orders_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id),
   CONSTRAINT orders_table_id_fkey FOREIGN KEY (table_id) REFERENCES public.tables(id),
+  CONSTRAINT orders_completed_by_staff_id_fkey FOREIGN KEY (completed_by_staff_id) REFERENCES public.staff(id),
   CONSTRAINT orders_assigned_to_staff_id_fkey FOREIGN KEY (assigned_to_staff_id) REFERENCES public.staff(id),
   CONSTRAINT orders_status_updated_by_fkey FOREIGN KEY (status_updated_by) REFERENCES public.staff(id),
   CONSTRAINT orders_delivery_location_id_fkey FOREIGN KEY (delivery_location_id) REFERENCES public.delivery_locations(id)
@@ -655,6 +742,66 @@ CREATE TABLE public.rate_limits (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT rate_limits_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.realtime_notifications (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  business_id uuid NOT NULL,
+  sender_staff_id uuid,
+  sender_name text NOT NULL,
+  type text NOT NULL CHECK (type = ANY (ARRAY['order'::text, 'inventory'::text, 'table'::text, 'payment'::text, 'request'::text, 'alert'::text, 'system'::text])),
+  title text NOT NULL,
+  message text NOT NULL,
+  priority text NOT NULL DEFAULT 'normal'::text CHECK (priority = ANY (ARRAY['low'::text, 'normal'::text, 'high'::text, 'urgent'::text])),
+  target_roles ARRAY NOT NULL DEFAULT '{}'::text[],
+  target_staff_ids ARRAY NOT NULL DEFAULT '{}'::uuid[],
+  target_dashboards ARRAY NOT NULL DEFAULT '{}'::text[],
+  data jsonb NOT NULL DEFAULT '{}'::jsonb,
+  expires_at timestamp with time zone,
+  action_required boolean NOT NULL DEFAULT false,
+  action_url text,
+  send_to_all boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  is_read boolean NOT NULL DEFAULT false,
+  CONSTRAINT realtime_notifications_pkey PRIMARY KEY (id),
+  CONSTRAINT realtime_notifications_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
+  CONSTRAINT realtime_notifications_sender_staff_id_fkey FOREIGN KEY (sender_staff_id) REFERENCES public.staff(id)
+);
+CREATE TABLE public.refund_requests (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  payment_id uuid NOT NULL,
+  amount integer NOT NULL,
+  reason text NOT NULL,
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'approved'::text, 'denied'::text])),
+  requested_by_staff_id uuid,
+  approved_by_staff_id uuid,
+  denied_by_staff_id uuid,
+  approved_at timestamp with time zone,
+  denied_at timestamp with time zone,
+  admin_notes text,
+  denial_reason text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT refund_requests_pkey PRIMARY KEY (id),
+  CONSTRAINT refund_requests_payment_id_fkey FOREIGN KEY (payment_id) REFERENCES public.payments(id),
+  CONSTRAINT refund_requests_requested_by_staff_id_fkey FOREIGN KEY (requested_by_staff_id) REFERENCES public.staff(id),
+  CONSTRAINT refund_requests_approved_by_staff_id_fkey FOREIGN KEY (approved_by_staff_id) REFERENCES public.staff(id),
+  CONSTRAINT refund_requests_denied_by_staff_id_fkey FOREIGN KEY (denied_by_staff_id) REFERENCES public.staff(id)
+);
+CREATE TABLE public.refund_transactions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  refund_request_id uuid NOT NULL,
+  payment_id uuid NOT NULL,
+  amount integer NOT NULL,
+  refund_method text NOT NULL,
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'completed'::text, 'failed'::text])),
+  reference_number text,
+  processed_at timestamp with time zone,
+  failure_reason text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT refund_transactions_pkey PRIMARY KEY (id),
+  CONSTRAINT refund_transactions_refund_request_id_fkey FOREIGN KEY (refund_request_id) REFERENCES public.refund_requests(id),
+  CONSTRAINT refund_transactions_payment_id_fkey FOREIGN KEY (payment_id) REFERENCES public.payments(id)
 );
 CREATE TABLE public.reservation_analytics (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -999,20 +1146,19 @@ CREATE TABLE public.staff_access_logs (
 );
 CREATE TABLE public.staff_activity_logs (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
-  business_id uuid NOT NULL,
   staff_id uuid NOT NULL,
-  session_id uuid,
-  action text NOT NULL,
-  performed_by uuid NOT NULL,
-  details jsonb DEFAULT '{}'::jsonb,
-  ip_address inet,
-  user_agent text,
+  staff_session_id uuid,
+  business_id uuid NOT NULL,
+  activity_type text NOT NULL CHECK (activity_type = ANY (ARRAY['order_created'::text, 'order_updated'::text, 'order_status_changed'::text, 'payment_processed'::text, 'inventory_requested'::text, 'inventory_approved'::text, 'inventory_denied'::text, 'inventory_updated'::text, 'table_assigned'::text, 'customer_served'::text, 'report_generated'::text, 'refund_processed'::text, 'dashboard_accessed'::text, 'login'::text, 'logout'::text, 'error_occurred'::text])),
+  activity_details jsonb NOT NULL DEFAULT '{}'::jsonb,
+  performance_metrics jsonb DEFAULT '{}'::jsonb,
+  timestamp timestamp with time zone DEFAULT now(),
+  shift_date date NOT NULL DEFAULT CURRENT_DATE,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT staff_activity_logs_pkey PRIMARY KEY (id),
-  CONSTRAINT staff_activity_logs_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
   CONSTRAINT staff_activity_logs_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
-  CONSTRAINT staff_activity_logs_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.staff_sessions(id),
-  CONSTRAINT staff_activity_logs_performed_by_fkey FOREIGN KEY (performed_by) REFERENCES auth.users(id)
+  CONSTRAINT staff_activity_logs_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
+  CONSTRAINT staff_activity_logs_staff_session_id_fkey FOREIGN KEY (staff_session_id) REFERENCES public.staff_sessions(id)
 );
 CREATE TABLE public.staff_attendance (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -1032,6 +1178,22 @@ CREATE TABLE public.staff_attendance (
   CONSTRAINT staff_attendance_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
   CONSTRAINT staff_attendance_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
   CONSTRAINT staff_attendance_shift_id_fkey FOREIGN KEY (shift_id) REFERENCES public.staff_shifts(id)
+);
+CREATE TABLE public.staff_dashboard_subscriptions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  staff_id uuid NOT NULL,
+  business_id uuid NOT NULL,
+  dashboard_type text NOT NULL CHECK (dashboard_type = ANY (ARRAY['reception'::text, 'kitchen'::text, 'bar'::text, 'accountant'::text])),
+  event_types ARRAY NOT NULL DEFAULT '{}'::text[],
+  notification_preferences jsonb NOT NULL DEFAULT '{}'::jsonb,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  updated_by uuid,
+  CONSTRAINT staff_dashboard_subscriptions_pkey PRIMARY KEY (id),
+  CONSTRAINT staff_dashboard_subscriptions_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
+  CONSTRAINT staff_dashboard_subscriptions_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
+  CONSTRAINT staff_dashboard_subscriptions_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.staff(id)
 );
 CREATE TABLE public.staff_documents (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -1205,6 +1367,24 @@ CREATE TABLE public.suppliers (
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT suppliers_pkey PRIMARY KEY (id),
   CONSTRAINT suppliers_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id)
+);
+CREATE TABLE public.sync_conflicts (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  business_id uuid NOT NULL,
+  resource_type text NOT NULL,
+  resource_id uuid NOT NULL,
+  staff_id uuid,
+  local_version jsonb NOT NULL,
+  remote_version jsonb NOT NULL,
+  resolution_strategy text NOT NULL DEFAULT 'remote_wins'::text CHECK (resolution_strategy = ANY (ARRAY['local_wins'::text, 'remote_wins'::text, 'merge'::text, 'manual'::text])),
+  resolved_version jsonb,
+  resolved_at timestamp with time zone,
+  resolved_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT sync_conflicts_pkey PRIMARY KEY (id),
+  CONSTRAINT sync_conflicts_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.business_owner(id),
+  CONSTRAINT sync_conflicts_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
+  CONSTRAINT sync_conflicts_resolved_by_fkey FOREIGN KEY (resolved_by) REFERENCES public.staff(id)
 );
 CREATE TABLE public.tables (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

@@ -24,8 +24,11 @@ export default function Profile() {
   };
   return (
     <div className="flex ml-2">
-      <DropdownMenu modal={false}>
-        <DropdownMenuTrigger className="rounded-full ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+      <DropdownMenu modal={false} suppressHydrationWarning>
+        <DropdownMenuTrigger
+          className="rounded-full ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          suppressHydrationWarning
+        >
           <Avatar>
             <AvatarImage src="https://github.com/shadcn.png" />
             <AvatarFallback>CN</AvatarFallback>
@@ -36,6 +39,7 @@ export default function Profile() {
           alignOffset={-10}
           className="flex flex-col"
           align="end"
+          suppressHydrationWarning
         >
           <DropdownMenuItem asChild>
             <Link

@@ -71,247 +71,261 @@ export default function WeeklySales({
         </h3>
 
         <CardContent className="pb-2 px-0">
-          <Tabs
-            defaultValue="sales"
-            aria-label="Weekly sales chart view options"
-          >
-            <TabsList
-              className="mb-4 sm:mb-6 w-full sm:w-auto"
-              role="tablist"
-              aria-label="Chart data type selection"
+          {!mounted ? (
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Skeleton className="h-10 w-20" />
+                <Skeleton className="h-10 w-20" />
+              </div>
+              <Skeleton className="h-48 sm:h-60 lg:h-64 w-full" />
+            </div>
+          ) : (
+            <Tabs
+              defaultValue="sales"
+              aria-label="Weekly sales chart view options"
+              suppressHydrationWarning
             >
-              <TabsTrigger
+              <TabsList
+                className="mb-4 sm:mb-6 w-full sm:w-auto"
+                role="tablist"
+                aria-label="Chart data type selection"
+                suppressHydrationWarning
+              >
+                <TabsTrigger
+                  value="sales"
+                  className="data-[state=active]:text-primary flex-1 sm:flex-none text-sm"
+                  role="tab"
+                  aria-controls="sales-chart"
+                  aria-label="View sales data chart"
+                  suppressHydrationWarning
+                >
+                  Sales
+                </TabsTrigger>
+                <TabsTrigger
+                  value="orders"
+                  className="data-[state=active]:text-orange-500 flex-1 sm:flex-none text-sm"
+                  role="tab"
+                  aria-controls="orders-chart"
+                  aria-label="View orders data chart"
+                  suppressHydrationWarning
+                >
+                  Orders
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent
                 value="sales"
-                className="data-[state=active]:text-primary flex-1 sm:flex-none text-sm"
-                role="tab"
-                aria-controls="sales-chart"
-                aria-label="View sales data chart"
+                className="relative h-48 sm:h-60 lg:h-64"
+                id="sales-chart"
+                role="tabpanel"
+                aria-labelledby="sales-tab"
+                aria-label="Weekly sales line chart"
               >
-                Sales
-              </TabsTrigger>
-              <TabsTrigger
+                {isLoading ? (
+                  <Skeleton
+                    className="size-full"
+                    aria-label="Loading sales chart"
+                  />
+                ) : !hasData ? (
+                  <div
+                    className="flex items-center justify-center h-full text-muted-foreground"
+                    role="status"
+                    aria-label="No sales data available"
+                  >
+                    <div className="text-center px-4">
+                      <p className="text-sm">No sales data available</p>
+                      <p className="text-xs mt-1">
+                        Try selecting a different date range
+                      </p>
+                    </div>
+                  </div>
+                ) : mounted ? (
+                  <div>
+                    <ChartDescription
+                      title="Weekly Sales"
+                      data={data}
+                      type="line"
+                    />
+                    <Line
+                      data={{
+                        labels: data.labels,
+                        datasets: [
+                          {
+                            label: "Sales",
+                            data: data.salesData.map((val) => val / 100), // Convert from kobo to naira for display
+                            borderColor: "rgb(34, 197, 94)",
+                            backgroundColor: "rgb(34, 197, 94)",
+                            tension: 0.1,
+                          },
+                        ],
+                      }}
+                      options={{
+                        maintainAspectRatio: false,
+                        responsive: true,
+                        interaction: {
+                          intersect: false,
+                          mode: "index",
+                        },
+                        scales: {
+                          y: {
+                            grid: {
+                              color: gridColor,
+                            },
+                            border: {
+                              color: gridColor,
+                            },
+                            ticks: {
+                              callback: function (value) {
+                                return `₦${Number(value).toLocaleString(
+                                  "en-NG"
+                                )}`;
+                              },
+                              padding: 4,
+                              maxTicksLimit: 6,
+                            },
+                            beginAtZero: true,
+                          },
+                          x: {
+                            grid: {
+                              display: false,
+                            },
+                            ticks: {
+                              maxTicksLimit: 7,
+                            },
+                          },
+                        },
+                        plugins: {
+                          legend: {
+                            display: false,
+                          },
+                          tooltip: {
+                            callbacks: {
+                              label: (context) => {
+                                const value = context.parsed.y;
+                                return `${
+                                  context.dataset.label
+                                }: ₦${value.toLocaleString("en-NG", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}`;
+                              },
+                            },
+                          },
+                        },
+                      }}
+                    />
+                    <ChartDescription
+                      title="Weekly Sales"
+                      data={data}
+                      type="line"
+                    />
+                  </div>
+                ) : (
+                  <Skeleton className="size-full" />
+                )}
+              </TabsContent>
+
+              <TabsContent
                 value="orders"
-                className="data-[state=active]:text-orange-500 flex-1 sm:flex-none text-sm"
-                role="tab"
-                aria-controls="orders-chart"
-                aria-label="View orders data chart"
+                className="relative h-48 sm:h-60 lg:h-64"
+                id="orders-chart"
+                role="tabpanel"
+                aria-labelledby="orders-tab"
+                aria-label="Weekly orders line chart"
               >
-                Orders
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent
-              value="sales"
-              className="relative h-48 sm:h-60 lg:h-64"
-              id="sales-chart"
-              role="tabpanel"
-              aria-labelledby="sales-tab"
-              aria-label="Weekly sales line chart"
-            >
-              {isLoading ? (
-                <Skeleton
-                  className="size-full"
-                  aria-label="Loading sales chart"
-                />
-              ) : !hasData ? (
-                <div
-                  className="flex items-center justify-center h-full text-muted-foreground"
-                  role="status"
-                  aria-label="No sales data available"
-                >
-                  <div className="text-center px-4">
-                    <p className="text-sm">No sales data available</p>
-                    <p className="text-xs mt-1">
-                      Try selecting a different date range
-                    </p>
-                  </div>
-                </div>
-              ) : mounted ? (
-                <div>
-                  <ChartDescription
-                    title="Weekly Sales"
-                    data={data}
-                    type="line"
+                {isLoading ? (
+                  <Skeleton
+                    className="size-full"
+                    aria-label="Loading orders chart"
                   />
-                  <Line
-                    data={{
-                      labels: data.labels,
-                      datasets: [
-                        {
-                          label: "Sales",
-                          data: data.salesData.map((val) => val / 100), // Convert from kobo to naira for display
-                          borderColor: "rgb(34, 197, 94)",
-                          backgroundColor: "rgb(34, 197, 94)",
-                          tension: 0.1,
+                ) : !hasData ? (
+                  <div
+                    className="flex items-center justify-center h-full text-muted-foreground"
+                    role="status"
+                    aria-label="No order data available"
+                  >
+                    <div className="text-center px-4">
+                      <p className="text-sm">No order data available</p>
+                      <p className="text-xs mt-1">
+                        Try selecting a different date range
+                      </p>
+                    </div>
+                  </div>
+                ) : mounted ? (
+                  <div>
+                    <Line
+                      data={{
+                        labels: data.labels,
+                        datasets: [
+                          {
+                            label: "Orders",
+                            data: data.ordersData,
+                            borderColor: "rgb(249, 115, 22)",
+                            backgroundColor: "rgb(249, 115, 22)",
+                            tension: 0.1,
+                          },
+                        ],
+                      }}
+                      options={{
+                        maintainAspectRatio: false,
+                        responsive: true,
+                        interaction: {
+                          intersect: false,
+                          mode: "index",
                         },
-                      ],
-                    }}
-                    options={{
-                      maintainAspectRatio: false,
-                      responsive: true,
-                      interaction: {
-                        intersect: false,
-                        mode: "index",
-                      },
-                      scales: {
-                        y: {
-                          grid: {
-                            color: gridColor,
-                          },
-                          border: {
-                            color: gridColor,
-                          },
-                          ticks: {
-                            callback: function (value) {
-                              return `₦${Number(value).toLocaleString(
-                                "en-NG"
-                              )}`;
+                        scales: {
+                          y: {
+                            grid: {
+                              color: gridColor,
                             },
-                            padding: 4,
-                            maxTicksLimit: 6,
+                            border: {
+                              color: gridColor,
+                            },
+                            ticks: {
+                              stepSize: 1,
+                              padding: 4,
+                              maxTicksLimit: 6,
+                            },
+                            beginAtZero: true,
                           },
-                          beginAtZero: true,
+                          x: {
+                            grid: {
+                              display: false,
+                            },
+                            ticks: {
+                              maxTicksLimit: 7,
+                            },
+                          },
                         },
-                        x: {
-                          grid: {
+                        plugins: {
+                          legend: {
                             display: false,
                           },
-                          ticks: {
-                            maxTicksLimit: 7,
-                          },
-                        },
-                      },
-                      plugins: {
-                        legend: {
-                          display: false,
-                        },
-                        tooltip: {
-                          callbacks: {
-                            label: (context) => {
-                              const value = context.parsed.y;
-                              return `${
-                                context.dataset.label
-                              }: ₦${value.toLocaleString("en-NG", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}`;
+                          tooltip: {
+                            callbacks: {
+                              label: (context) => {
+                                const value = context.parsed.y;
+                                return `${
+                                  context.dataset.label
+                                }: ${value} order${value !== 1 ? "s" : ""}`;
+                              },
                             },
                           },
                         },
-                      },
-                    }}
-                  />
-                  <ChartDescription
-                    title="Weekly Sales"
-                    data={data}
-                    type="line"
-                  />
-                </div>
-              ) : (
-                <Skeleton className="size-full" />
-              )}
-            </TabsContent>
-
-            <TabsContent
-              value="orders"
-              className="relative h-48 sm:h-60 lg:h-64"
-              id="orders-chart"
-              role="tabpanel"
-              aria-labelledby="orders-tab"
-              aria-label="Weekly orders line chart"
-            >
-              {isLoading ? (
-                <Skeleton
-                  className="size-full"
-                  aria-label="Loading orders chart"
-                />
-              ) : !hasData ? (
-                <div
-                  className="flex items-center justify-center h-full text-muted-foreground"
-                  role="status"
-                  aria-label="No order data available"
-                >
-                  <div className="text-center px-4">
-                    <p className="text-sm">No order data available</p>
-                    <p className="text-xs mt-1">
-                      Try selecting a different date range
-                    </p>
+                      }}
+                    />
+                    <ChartDescription
+                      title="Weekly Orders"
+                      data={data}
+                      type="line"
+                    />
                   </div>
-                </div>
-              ) : mounted ? (
-                <div>
-                  <Line
-                    data={{
-                      labels: data.labels,
-                      datasets: [
-                        {
-                          label: "Orders",
-                          data: data.ordersData,
-                          borderColor: "rgb(249, 115, 22)",
-                          backgroundColor: "rgb(249, 115, 22)",
-                          tension: 0.1,
-                        },
-                      ],
-                    }}
-                    options={{
-                      maintainAspectRatio: false,
-                      responsive: true,
-                      interaction: {
-                        intersect: false,
-                        mode: "index",
-                      },
-                      scales: {
-                        y: {
-                          grid: {
-                            color: gridColor,
-                          },
-                          border: {
-                            color: gridColor,
-                          },
-                          ticks: {
-                            stepSize: 1,
-                            padding: 4,
-                            maxTicksLimit: 6,
-                          },
-                          beginAtZero: true,
-                        },
-                        x: {
-                          grid: {
-                            display: false,
-                          },
-                          ticks: {
-                            maxTicksLimit: 7,
-                          },
-                        },
-                      },
-                      plugins: {
-                        legend: {
-                          display: false,
-                        },
-                        tooltip: {
-                          callbacks: {
-                            label: (context) => {
-                              const value = context.parsed.y;
-                              return `${context.dataset.label}: ${value} order${
-                                value !== 1 ? "s" : ""
-                              }`;
-                            },
-                          },
-                        },
-                      },
-                    }}
-                  />
-                  <ChartDescription
-                    title="Weekly Orders"
-                    data={data}
-                    type="line"
-                  />
-                </div>
-              ) : (
-                <Skeleton className="size-full" />
-              )}
-            </TabsContent>
-          </Tabs>
+                ) : (
+                  <Skeleton className="size-full" />
+                )}
+              </TabsContent>
+            </Tabs>
+          )}
         </CardContent>
       </div>
     </Card>

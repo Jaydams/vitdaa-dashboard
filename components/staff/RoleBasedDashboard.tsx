@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, AlertCircle, Shield, User, Building, Clock, LogOut } from "lucide-react";
+import {
+  Loader2,
+  AlertCircle,
+  Shield,
+  User,
+  Building,
+  Clock,
+  LogOut,
+} from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -16,6 +24,7 @@ import ReceptionDashboard from "./ReceptionDashboard";
 import KitchenDashboard from "./KitchenDashboard";
 import BarDashboard from "./BarDashboard";
 import AccountantDashboard from "./AccountantDashboard";
+import { ResponsiveDashboardProvider } from "@/components/responsive/ResponsiveDashboardProvider";
 
 interface RoleBasedDashboardProps {
   staffSession: StaffSession;
@@ -174,8 +183,9 @@ export default function RoleBasedDashboard({
   const handleSignOut = async () => {
     try {
       // Clear the session cookie
-      document.cookie = "staff_session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      
+      document.cookie =
+        "staff_session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+
       // Call the server action to terminate the session
       const response = await fetch("/api/staff/signout", {
         method: "POST",
@@ -194,7 +204,8 @@ export default function RoleBasedDashboard({
     } catch (error) {
       console.error("Signout error:", error);
       // Even if there's an error, clear cookie and redirect
-      document.cookie = "staff_session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      document.cookie =
+        "staff_session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       window.location.href = "/staff-login?message=signed-out";
     }
   };
@@ -228,13 +239,29 @@ export default function RoleBasedDashboard({
   const renderRoleDashboard = () => {
     switch (staff.role) {
       case "reception":
-        return <ReceptionDashboard staffSession={staffSession} />;
+        return (
+          <ResponsiveDashboardProvider>
+            <ReceptionDashboard staffSession={staffSession} />
+          </ResponsiveDashboardProvider>
+        );
       case "kitchen":
-        return <KitchenDashboard staffSession={staffSession} />;
+        return (
+          <ResponsiveDashboardProvider>
+            <KitchenDashboard staffSession={staffSession} />
+          </ResponsiveDashboardProvider>
+        );
       case "bar":
-        return <BarDashboard staffSession={staffSession} />;
+        return (
+          <ResponsiveDashboardProvider>
+            <BarDashboard staffSession={staffSession} />
+          </ResponsiveDashboardProvider>
+        );
       case "accountant":
-        return <AccountantDashboard staffSession={staffSession} />;
+        return (
+          <ResponsiveDashboardProvider>
+            <AccountantDashboard staffSession={staffSession} />
+          </ResponsiveDashboardProvider>
+        );
       default:
         return (
           <Card className="border-0 shadow-sm bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20">
@@ -280,7 +307,7 @@ export default function RoleBasedDashboard({
     const diff = expires.getTime() - now.getTime();
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (hours > 0) {
       return `${hours}h ${minutes}m remaining`;
     }
@@ -297,36 +324,44 @@ export default function RoleBasedDashboard({
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 min-w-0">
               {/* Avatar - Responsive */}
               <Avatar className="h-12 w-12 sm:h-16 sm:w-16 border-4 border-white shadow-lg flex-shrink-0">
-                <AvatarImage src={staff.avatar_url || ""} />
+                <AvatarImage src={(staff as any).avatar_url || ""} />
                 <AvatarFallback className="text-sm sm:text-lg font-semibold bg-gradient-to-br from-primary to-primary/80 text-white">
                   {getInitials(staff.first_name, staff.last_name)}
                 </AvatarFallback>
               </Avatar>
-              
+
               {/* Staff Details - Responsive */}
               <div className="space-y-1 min-w-0 flex-1">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                   <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 truncate">
                     Welcome, {staff.first_name} {staff.last_name}
                   </h1>
-                  <Badge className={`${getRoleColor(staff.role)} capitalize font-medium w-fit`}>
+                  <Badge
+                    className={`${getRoleColor(
+                      staff.role
+                    )} capitalize font-medium w-fit`}
+                  >
                     {staff.role}
                   </Badge>
                 </div>
-                
+
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Building className="h-4 w-4 flex-shrink-0" />
-                    <span className="font-medium truncate">{business.business_name}</span>
+                    <span className="font-medium truncate">
+                      {business.business_name}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <User className="h-4 w-4 flex-shrink-0" />
-                    <span className="text-xs sm:text-sm">ID: {staff.id.slice(-8).toUpperCase()}</span>
+                    <span className="text-xs sm:text-sm">
+                      ID: {staff.id.slice(-8).toUpperCase()}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
-            
+
             {/* Session Info and Actions - Responsive */}
             <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-3 lg:gap-2 lg:text-right">
               <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-2">
@@ -338,7 +373,7 @@ export default function RoleBasedDashboard({
                   {formatTimeRemaining(sessionRecord.expires_at)}
                 </div>
               </div>
-              
+
               <Button
                 variant="outline"
                 size="sm"
@@ -352,14 +387,15 @@ export default function RoleBasedDashboard({
             </div>
           </div>
         </CardHeader>
-        
+
         <Separator className="mb-4" />
-        
+
         <CardContent>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm">
               <div className="text-muted-foreground">
-                <span className="font-medium">Permissions:</span> {permissions.length} active
+                <span className="font-medium">Permissions:</span>{" "}
+                {permissions.length} active
               </div>
               <div className="text-muted-foreground">
                 <span className="font-medium">Access Level:</span> {staff.role}

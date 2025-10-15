@@ -11,7 +11,13 @@ export interface InventoryCategory {
   name: string;
   description?: string;
   parent_category_id?: string;
-  category_type: 'food' | 'beverage' | 'supplies' | 'equipment' | 'cleaning' | 'other';
+  category_type:
+    | "food"
+    | "beverage"
+    | "supplies"
+    | "equipment"
+    | "cleaning"
+    | "other";
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -31,6 +37,13 @@ export interface Supplier {
   current_balance: number;
   rating?: number;
   notes?: string;
+  // Banking Information
+  bank_name?: string;
+  account_number?: string;
+  account_name?: string;
+  routing_number?: string;
+  swift_code?: string;
+  bank_address?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -45,7 +58,18 @@ export interface InventoryItem {
   description?: string;
   sku?: string;
   barcode?: string;
-  unit_of_measure: 'pieces' | 'kg' | 'grams' | 'liters' | 'ml' | 'boxes' | 'bottles' | 'cans' | 'bags' | 'packs' | 'units';
+  unit_of_measure:
+    | "pieces"
+    | "kg"
+    | "grams"
+    | "liters"
+    | "ml"
+    | "boxes"
+    | "bottles"
+    | "cans"
+    | "bags"
+    | "packs"
+    | "units";
   current_stock: number;
   minimum_stock: number;
   maximum_stock: number;
@@ -72,7 +96,16 @@ export interface InventoryTransaction {
   id: string;
   business_id: string;
   item_id: string;
-  transaction_type: 'purchase' | 'sale' | 'adjustment' | 'waste' | 'transfer_in' | 'transfer_out' | 'return' | 'damage' | 'expiry';
+  transaction_type:
+    | "purchase"
+    | "sale"
+    | "adjustment"
+    | "waste"
+    | "transfer_in"
+    | "transfer_out"
+    | "return"
+    | "damage"
+    | "expiry";
   quantity: number;
   unit_cost: number;
   total_cost: number;
@@ -93,8 +126,14 @@ export interface InventoryAlert {
   id: string;
   business_id: string;
   item_id: string;
-  alert_type: 'low_stock' | 'out_of_stock' | 'expiring_soon' | 'expired' | 'overstock' | 'price_change';
-  severity: 'low' | 'medium' | 'high' | 'critical';
+  alert_type:
+    | "low_stock"
+    | "out_of_stock"
+    | "expiring_soon"
+    | "expired"
+    | "overstock"
+    | "price_change";
+  severity: "low" | "medium" | "high" | "critical";
   message: string;
   is_resolved: boolean;
   resolved_by?: string;
@@ -111,7 +150,7 @@ export interface PurchaseOrder {
   order_date: string;
   expected_delivery_date?: string;
   delivery_date?: string;
-  status: 'draft' | 'sent' | 'confirmed' | 'received' | 'cancelled';
+  status: "draft" | "sent" | "confirmed" | "received" | "cancelled";
   subtotal: number;
   tax_amount: number;
   shipping_cost: number;
@@ -155,13 +194,36 @@ export async function fetchInventoryCategories({
 }: PaginationQueryProps & { businessId: string }): Promise<any> {
   const supabase = await createClient();
   try {
+    // If businessId is empty, get it from the authenticated user
+    let actualBusinessId = businessId;
+    if (!businessId || businessId === "") {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      const { data: businessOwner } = await supabase
+        .from("business_owner")
+        .select("id")
+        .eq("email", user.email)
+        .single();
+
+      if (!businessOwner) {
+        throw new Error("Business owner not found");
+      }
+
+      actualBusinessId = businessOwner.id;
+    }
+
     const startIndex = (page - 1) * perPage;
     const endIndex = startIndex + perPage - 1;
 
     const { data, count, error } = await supabase
       .from("inventory_categories")
       .select("*", { count: "exact" })
-      .eq("business_id", businessId)
+      .eq("business_id", actualBusinessId)
       .eq("is_active", true)
       .range(startIndex, endIndex)
       .order("name", { ascending: true });
@@ -195,7 +257,7 @@ export async function fetchInventoryItems({
   search,
   lowStock,
   expiring,
-}: PaginationQueryProps & { 
+}: PaginationQueryProps & {
   businessId: string;
   categoryId?: string;
   search?: string;
@@ -204,13 +266,38 @@ export async function fetchInventoryItems({
 }): Promise<any> {
   const supabase = await createClient();
   try {
+    // If businessId is empty, get it from the authenticated user
+    let actualBusinessId = businessId;
+    if (!businessId || businessId === "") {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      const { data: businessOwner } = await supabase
+        .from("business_owner")
+        .select("id")
+        .eq("email", user.email)
+        .single();
+
+      if (!businessOwner) {
+        throw new Error("Business owner not found");
+      }
+
+      actualBusinessId = businessOwner.id;
+    }
+
     const startIndex = (page - 1) * perPage;
     const endIndex = startIndex + perPage - 1;
 
     let query = supabase
       .from("inventory_items")
-      .select("*, category:inventory_categories(*), supplier:suppliers(*)", { count: "exact" })
-      .eq("business_id", businessId)
+      .select("*, category:inventory_categories(*), supplier:suppliers(*)", {
+        count: "exact",
+      })
+      .eq("business_id", actualBusinessId)
       .eq("is_available", true);
 
     if (categoryId) {
@@ -218,7 +305,9 @@ export async function fetchInventoryItems({
     }
 
     if (search) {
-      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%,sku.ilike.%${search}%`);
+      query = query.or(
+        `name.ilike.%${search}%,description.ilike.%${search}%,sku.ilike.%${search}%`
+      );
     }
 
     if (lowStock) {
@@ -228,7 +317,10 @@ export async function fetchInventoryItems({
     if (expiring) {
       const thirtyDaysFromNow = new Date();
       thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-      query = query.lte("expiry_date", thirtyDaysFromNow.toISOString().split('T')[0]);
+      query = query.lte(
+        "expiry_date",
+        thirtyDaysFromNow.toISOString().split("T")[0]
+      );
     }
 
     const { data, count, error } = await query
@@ -263,13 +355,36 @@ export async function fetchSuppliers({
 }: PaginationQueryProps & { businessId: string }): Promise<any> {
   const supabase = await createClient();
   try {
+    // If businessId is empty, get it from the authenticated user
+    let actualBusinessId = businessId;
+    if (!businessId || businessId === "") {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      const { data: businessOwner } = await supabase
+        .from("business_owner")
+        .select("id")
+        .eq("email", user.email)
+        .single();
+
+      if (!businessOwner) {
+        throw new Error("Business owner not found");
+      }
+
+      actualBusinessId = businessOwner.id;
+    }
+
     const startIndex = (page - 1) * perPage;
     const endIndex = startIndex + perPage - 1;
 
     const { data, count, error } = await supabase
       .from("suppliers")
       .select("*", { count: "exact" })
-      .eq("business_id", businessId)
+      .eq("business_id", actualBusinessId)
       .eq("is_active", true)
       .range(startIndex, endIndex)
       .order("name", { ascending: true });
@@ -300,19 +415,42 @@ export async function fetchInventoryAlerts({
   perPage = 10,
   businessId,
   resolved,
-}: PaginationQueryProps & { 
+}: PaginationQueryProps & {
   businessId: string;
   resolved?: boolean;
 }): Promise<any> {
   const supabase = await createClient();
   try {
+    // If businessId is empty, get it from the authenticated user
+    let actualBusinessId = businessId;
+    if (!businessId || businessId === "") {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      const { data: businessOwner } = await supabase
+        .from("business_owner")
+        .select("id")
+        .eq("email", user.email)
+        .single();
+
+      if (!businessOwner) {
+        throw new Error("Business owner not found");
+      }
+
+      actualBusinessId = businessOwner.id;
+    }
+
     const startIndex = (page - 1) * perPage;
     const endIndex = startIndex + perPage - 1;
 
     let query = supabase
       .from("inventory_alerts")
       .select("*, item:inventory_items(*)", { count: "exact" })
-      .eq("business_id", businessId);
+      .eq("business_id", actualBusinessId);
 
     if (resolved !== undefined) {
       query = query.eq("is_resolved", resolved);
@@ -349,20 +487,45 @@ export async function fetchInventoryTransactions({
   businessId,
   itemId,
   transactionType,
-}: PaginationQueryProps & { 
+}: PaginationQueryProps & {
   businessId: string;
   itemId?: string;
   transactionType?: string;
 }): Promise<any> {
   const supabase = await createClient();
   try {
+    // If businessId is empty, get it from the authenticated user
+    let actualBusinessId = businessId;
+    if (!businessId || businessId === "") {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      const { data: businessOwner } = await supabase
+        .from("business_owner")
+        .select("id")
+        .eq("email", user.email)
+        .single();
+
+      if (!businessOwner) {
+        throw new Error("Business owner not found");
+      }
+
+      actualBusinessId = businessOwner.id;
+    }
+
     const startIndex = (page - 1) * perPage;
     const endIndex = startIndex + perPage - 1;
 
     let query = supabase
       .from("inventory_transactions")
-      .select("*, item:inventory_items(*), supplier:suppliers(*)", { count: "exact" })
-      .eq("business_id", businessId);
+      .select("*, item:inventory_items(*), supplier:suppliers(*)", {
+        count: "exact",
+      })
+      .eq("business_id", actualBusinessId);
 
     if (itemId) {
       query = query.eq("item_id", itemId);
@@ -395,15 +558,188 @@ export async function fetchInventoryTransactions({
 }
 
 /**
+ * Adds a new supplier
+ */
+export async function addSupplier(
+  formData: FormData
+): Promise<{ success: boolean; error?: string; supplier?: Supplier }> {
+  const supabase = await createClient();
+
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return { success: false, error: "User not authenticated" };
+    }
+
+    const businessOwner = await supabase
+      .from("business_owner")
+      .select("id")
+      .eq("email", user.email)
+      .single();
+
+    if (!businessOwner.data) {
+      return { success: false, error: "Business owner not found" };
+    }
+
+    const name = formData.get("name") as string;
+    const contactPerson = formData.get("contact_person") as string;
+    const email = formData.get("email") as string;
+    const phone = formData.get("phone") as string;
+    const address = formData.get("address") as string;
+    const taxId = formData.get("tax_id") as string;
+    const paymentTerms = formData.get("payment_terms") as string;
+    const creditLimit = parseFloat(formData.get("credit_limit") as string) || 0;
+    const rating = parseInt(formData.get("rating") as string) || null;
+    const notes = formData.get("notes") as string;
+
+    // Banking information
+    const bankName = formData.get("bank_name") as string;
+    const accountNumber = formData.get("account_number") as string;
+    const accountName = formData.get("account_name") as string;
+    const routingNumber = formData.get("routing_number") as string;
+    const swiftCode = formData.get("swift_code") as string;
+    const bankAddress = formData.get("bank_address") as string;
+
+    if (!name) {
+      return { success: false, error: "Supplier name is required" };
+    }
+
+    const { data, error } = await supabase
+      .from("suppliers")
+      .insert([
+        {
+          business_id: businessOwner.data.id,
+          name,
+          contact_person: contactPerson,
+          email,
+          phone,
+          address,
+          tax_id: taxId,
+          payment_terms: paymentTerms,
+          credit_limit: creditLimit,
+          current_balance: 0,
+          rating,
+          notes,
+          bank_name: bankName,
+          account_number: accountNumber,
+          account_name: accountName,
+          routing_number: routingNumber,
+          swift_code: swiftCode,
+          bank_address: bankAddress,
+          is_active: true,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error adding supplier:", error);
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/inventory/suppliers");
+    return { success: true, supplier: data as Supplier };
+  } catch (error: any) {
+    console.error("Error in addSupplier:", error);
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+/**
+ * Updates an existing supplier
+ */
+export async function updateSupplier(
+  supplierId: string,
+  formData: FormData
+): Promise<{ success: boolean; error?: string; supplier?: Supplier }> {
+  const supabase = await createClient();
+
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return { success: false, error: "User not authenticated" };
+    }
+
+    const name = formData.get("name") as string;
+    const contactPerson = formData.get("contact_person") as string;
+    const email = formData.get("email") as string;
+    const phone = formData.get("phone") as string;
+    const address = formData.get("address") as string;
+    const taxId = formData.get("tax_id") as string;
+    const paymentTerms = formData.get("payment_terms") as string;
+    const creditLimit = parseFloat(formData.get("credit_limit") as string) || 0;
+    const rating = parseInt(formData.get("rating") as string) || null;
+    const notes = formData.get("notes") as string;
+
+    // Banking information
+    const bankName = formData.get("bank_name") as string;
+    const accountNumber = formData.get("account_number") as string;
+    const accountName = formData.get("account_name") as string;
+    const routingNumber = formData.get("routing_number") as string;
+    const swiftCode = formData.get("swift_code") as string;
+    const bankAddress = formData.get("bank_address") as string;
+
+    if (!name) {
+      return { success: false, error: "Supplier name is required" };
+    }
+
+    const updateData: any = {
+      name,
+      contact_person: contactPerson || null,
+      email: email || null,
+      phone: phone || null,
+      address: address || null,
+      tax_id: taxId || null,
+      payment_terms: paymentTerms || null,
+      credit_limit: creditLimit,
+      rating,
+      notes: notes || null,
+      bank_name: bankName || null,
+      account_number: accountNumber || null,
+      account_name: accountName || null,
+      routing_number: routingNumber || null,
+      swift_code: swiftCode || null,
+      bank_address: bankAddress || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from("suppliers")
+      .update(updateData)
+      .eq("id", supplierId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating supplier:", error);
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/inventory/suppliers");
+    revalidatePath(`/inventory/suppliers/${supplierId}`);
+    return { success: true, supplier: data as Supplier };
+  } catch (error: any) {
+    console.error("Error in updateSupplier:", error);
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+/**
  * Adds a new inventory category
  */
 export async function addInventoryCategory(
   formData: FormData
 ): Promise<{ success: boolean; error?: string; category?: InventoryCategory }> {
   const supabase = await createClient();
-  
+
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       return { success: false, error: "User not authenticated" };
     }
@@ -429,14 +765,16 @@ export async function addInventoryCategory(
 
     const { data, error } = await supabase
       .from("inventory_categories")
-      .insert([{
-        business_id: businessOwner.data.id,
-        name,
-        description,
-        category_type: categoryType,
-        parent_category_id: parentCategoryId || null,
-        is_active: true,
-      }])
+      .insert([
+        {
+          business_id: businessOwner.data.id,
+          name,
+          description,
+          category_type: categoryType,
+          parent_category_id: parentCategoryId || null,
+          is_active: true,
+        },
+      ])
       .select()
       .single();
 
@@ -460,9 +798,11 @@ export async function addInventoryItem(
   formData: FormData
 ): Promise<{ success: boolean; error?: string; item?: InventoryItem }> {
   const supabase = await createClient();
-  
+
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       return { success: false, error: "User not authenticated" };
     }
@@ -485,7 +825,9 @@ export async function addInventoryItem(
     const unitOfMeasure = formData.get("unit_of_measure") as string;
     const minimumStock = parseFloat(formData.get("minimum_stock") as string);
     const reorderPoint = parseFloat(formData.get("reorder_point") as string);
-    const reorderQuantity = parseFloat(formData.get("reorder_quantity") as string);
+    const reorderQuantity = parseFloat(
+      formData.get("reorder_quantity") as string
+    );
     const unitCost = parseFloat(formData.get("unit_cost") as string);
     const sellingPrice = parseFloat(formData.get("selling_price") as string);
     const isPerishable = formData.get("is_perishable") === "true";
@@ -495,32 +837,37 @@ export async function addInventoryItem(
     const isIngredient = formData.get("is_ingredient") === "true";
 
     if (!name || !unitOfMeasure || isNaN(minimumStock) || isNaN(unitCost)) {
-      return { success: false, error: "Required fields are missing or invalid" };
+      return {
+        success: false,
+        error: "Required fields are missing or invalid",
+      };
     }
 
     const { data, error } = await supabase
       .from("inventory_items")
-      .insert([{
-        business_id: businessOwner.data.id,
-        name,
-        description,
-        sku,
-        category_id: categoryId || null,
-        supplier_id: supplierId || null,
-        unit_of_measure: unitOfMeasure,
-        minimum_stock: minimumStock,
-        reorder_point: reorderPoint,
-        reorder_quantity: reorderQuantity,
-        unit_cost: unitCost,
-        selling_price: sellingPrice,
-        cost_per_unit: unitCost,
-        is_perishable: isPerishable,
-        expiry_date: expiryDate || null,
-        location,
-        is_alcoholic: isAlcoholic,
-        is_ingredient: isIngredient,
-        is_available: true,
-      }])
+      .insert([
+        {
+          business_id: businessOwner.data.id,
+          name,
+          description,
+          sku,
+          category_id: categoryId || null,
+          supplier_id: supplierId || null,
+          unit_of_measure: unitOfMeasure,
+          minimum_stock: minimumStock,
+          reorder_point: reorderPoint,
+          reorder_quantity: reorderQuantity,
+          unit_cost: unitCost,
+          selling_price: sellingPrice,
+          cost_per_unit: unitCost,
+          is_perishable: isPerishable,
+          expiry_date: expiryDate || null,
+          location,
+          is_alcoholic: isAlcoholic,
+          is_ingredient: isIngredient,
+          is_available: true,
+        },
+      ])
       .select()
       .single();
 
@@ -540,13 +887,17 @@ export async function addInventoryItem(
 /**
  * Records an inventory transaction
  */
-export async function recordInventoryTransaction(
-  formData: FormData
-): Promise<{ success: boolean; error?: string; transaction?: InventoryTransaction }> {
+export async function recordInventoryTransaction(formData: FormData): Promise<{
+  success: boolean;
+  error?: string;
+  transaction?: InventoryTransaction;
+}> {
   const supabase = await createClient();
-  
+
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       return { success: false, error: "User not authenticated" };
     }
@@ -570,7 +921,10 @@ export async function recordInventoryTransaction(
     const notes = formData.get("notes") as string;
 
     if (!itemId || !transactionType || isNaN(quantity)) {
-      return { success: false, error: "Required fields are missing or invalid" };
+      return {
+        success: false,
+        error: "Required fields are missing or invalid",
+      };
     }
 
     // Get current stock level
@@ -588,9 +942,13 @@ export async function recordInventoryTransaction(
     let newStock = previousStock;
 
     // Calculate new stock based on transaction type
-    if (['purchase', 'transfer_in', 'return'].includes(transactionType)) {
+    if (["purchase", "transfer_in", "return"].includes(transactionType)) {
       newStock = previousStock + quantity;
-    } else if (['sale', 'waste', 'transfer_out', 'damage', 'expiry'].includes(transactionType)) {
+    } else if (
+      ["sale", "waste", "transfer_out", "damage", "expiry"].includes(
+        transactionType
+      )
+    ) {
       newStock = previousStock - quantity;
     }
 
@@ -598,19 +956,21 @@ export async function recordInventoryTransaction(
 
     const { data, error } = await supabase
       .from("inventory_transactions")
-      .insert([{
-        business_id: businessOwner.data.id,
-        item_id: itemId,
-        transaction_type: transactionType,
-        quantity,
-        unit_cost: unitCost,
-        total_cost: totalCost,
-        previous_stock: previousStock,
-        new_stock: newStock,
-        supplier_id: supplierId || null,
-        order_id: orderId || null,
-        notes,
-      }])
+      .insert([
+        {
+          business_id: businessOwner.data.id,
+          item_id: itemId,
+          transaction_type: transactionType,
+          quantity,
+          unit_cost: unitCost,
+          total_cost: totalCost,
+          previous_stock: previousStock,
+          new_stock: newStock,
+          supplier_id: supplierId || null,
+          order_id: orderId || null,
+          notes,
+        },
+      ])
       .select()
       .single();
 
@@ -635,7 +995,7 @@ export async function resolveInventoryAlert(
   resolvedBy: string
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient();
-  
+
   try {
     const { error } = await supabase
       .from("inventory_alerts")
@@ -664,7 +1024,7 @@ export async function resolveInventoryAlert(
  */
 export async function getInventoryStats(businessId: string): Promise<any> {
   const supabase = await createClient();
-  
+
   try {
     // Get total items
     const { count: totalItems } = await supabase
@@ -681,19 +1041,20 @@ export async function getInventoryStats(businessId: string): Promise<any> {
       .eq("is_available", true);
 
     // Calculate low stock items count
-    const lowStockItems = allItems?.filter(item => 
-      item.current_stock <= item.minimum_stock
-    ).length || 0;
+    const lowStockItems =
+      allItems?.filter((item) => item.current_stock <= item.minimum_stock)
+        .length || 0;
 
     // Calculate expiring items count (within 7 days)
     const sevenDaysFromNow = new Date();
     sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-    
-    const expiringItems = allItems?.filter(item => {
-      if (!item.expiry_date) return false;
-      const expiryDate = new Date(item.expiry_date);
-      return expiryDate <= sevenDaysFromNow;
-    }).length || 0;
+
+    const expiringItems =
+      allItems?.filter((item) => {
+        if (!item.expiry_date) return false;
+        const expiryDate = new Date(item.expiry_date);
+        return expiryDate <= sevenDaysFromNow;
+      }).length || 0;
 
     // Get active alerts
     const { count: activeAlerts } = await supabase
@@ -709,7 +1070,11 @@ export async function getInventoryStats(businessId: string): Promise<any> {
       .eq("business_id", businessId)
       .eq("is_available", true);
 
-    const totalValue = valuationData?.reduce((sum, item) => sum + ((item.current_stock || 0) * (item.unit_cost || 0)), 0) || 0;
+    const totalValue =
+      valuationData?.reduce(
+        (sum, item) => sum + (item.current_stock || 0) * (item.unit_cost || 0),
+        0
+      ) || 0;
 
     return {
       totalItems: totalItems || 0,
@@ -727,9 +1092,11 @@ export async function getInventoryStats(businessId: string): Promise<any> {
 /**
  * Gets low stock items
  */
-export async function getLowStockItems(businessId: string): Promise<InventoryItem[]> {
+export async function getLowStockItems(
+  businessId: string
+): Promise<InventoryItem[]> {
   const supabase = await createClient();
-  
+
   try {
     // First get all items for this business
     const { data, error } = await supabase
@@ -745,9 +1112,8 @@ export async function getLowStockItems(businessId: string): Promise<InventoryIte
     }
 
     // Filter for low stock items in JavaScript
-    const lowStockItems = data?.filter(item => 
-      item.current_stock <= item.minimum_stock
-    ) || [];
+    const lowStockItems =
+      data?.filter((item) => item.current_stock <= item.minimum_stock) || [];
 
     return lowStockItems;
   } catch (error) {
@@ -761,7 +1127,7 @@ export async function getLowStockItems(businessId: string): Promise<InventoryIte
  */
 export async function getExpiringItems(businessId: string): Promise<any[]> {
   const supabase = await createClient();
-  
+
   try {
     const { data, error } = await supabase
       .from("inventory_items")
@@ -779,12 +1145,13 @@ export async function getExpiringItems(businessId: string): Promise<any[]> {
     // Filter for items expiring within 30 days in JavaScript
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-    
-    const expiringItems = data?.filter(item => {
-      if (!item.expiry_date) return false;
-      const expiryDate = new Date(item.expiry_date);
-      return expiryDate <= thirtyDaysFromNow;
-    }) || [];
+
+    const expiringItems =
+      data?.filter((item) => {
+        if (!item.expiry_date) return false;
+        const expiryDate = new Date(item.expiry_date);
+        return expiryDate <= thirtyDaysFromNow;
+      }) || [];
 
     return expiringItems;
   } catch (error) {
@@ -796,13 +1163,17 @@ export async function getExpiringItems(businessId: string): Promise<any[]> {
 /**
  * Gets inventory valuation
  */
-export async function getInventoryValuation(businessId: string): Promise<any[]> {
+export async function getInventoryValuation(
+  businessId: string
+): Promise<any[]> {
   const supabase = await createClient();
-  
+
   try {
     const { data, error } = await supabase
       .from("inventory_items")
-      .select("id, name, current_stock, unit_cost, category:inventory_categories(name, category_type)")
+      .select(
+        "id, name, current_stock, unit_cost, category:inventory_categories(name, category_type)"
+      )
       .eq("business_id", businessId)
       .eq("is_available", true)
       .gt("current_stock", 0)
@@ -814,10 +1185,11 @@ export async function getInventoryValuation(businessId: string): Promise<any[]> 
     }
 
     // Calculate total value for each item
-    const valuationData = data?.map(item => ({
-      ...item,
-      total_value: (item.current_stock || 0) * (item.unit_cost || 0)
-    })) || [];
+    const valuationData =
+      data?.map((item) => ({
+        ...item,
+        total_value: (item.current_stock || 0) * (item.unit_cost || 0),
+      })) || [];
 
     return valuationData;
   } catch (error) {

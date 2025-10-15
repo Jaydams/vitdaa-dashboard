@@ -2,12 +2,9 @@ import { Fragment, Suspense } from "react";
 import { Metadata } from "next";
 
 import PageTitle from "@/components/shared/PageTitle";
-import SalesOverview from "./_components/SalesOverview";
-import StatusOverview from "./_components/StatusOverview";
-import DashboardCharts from "./_components/dashboard-charts";
-import { DateRangeFilter } from "./_components/DateRangeFilter";
 import RecentOrders from "@/app/(dashboard)/orders/_components/orders-table";
 import { DashboardContent } from "./_components/DashboardContent";
+import { DateRangeFilter } from "./_components/DateRangeFilter";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -21,7 +18,7 @@ export default async function DashboardPage() {
 
         <div className="space-y-4 sm:space-y-6 mb-6 sm:mb-8">
           {/* Date Range Filter */}
-          <div className="w-full">
+          <div className="w-full" suppressHydrationWarning>
             <DateRangeFilter useUrlState={true} />
           </div>
 

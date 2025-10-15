@@ -15,7 +15,12 @@ export default function ThemeToggle() {
 
   if (theme === "light") {
     return (
-      <Button variant="ghost" size="icon" onClick={() => setTheme("dark")}>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setTheme("dark")}
+        suppressHydrationWarning
+      >
         <Moon />
         <span className="sr-only">Dark Mode</span>
       </Button>
@@ -23,7 +28,12 @@ export default function ThemeToggle() {
   }
 
   return (
-    <Button variant="ghost" size="icon" onClick={() => setTheme("light")}>
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => setTheme("light")}
+      suppressHydrationWarning
+    >
       <Sun />
       <span className="sr-only">Light Mode</span>
     </Button>

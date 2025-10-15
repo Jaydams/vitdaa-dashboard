@@ -12,6 +12,9 @@ import {
   AlertCircle,
   BarChart3,
   Users,
+  Plus,
+  ShoppingCart,
+  X,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +33,8 @@ import { PermissionGuard } from "./RoleBasedDashboard";
 import { FinancialReportingInterface } from "./FinancialReportingInterface";
 import { RefundProcessingInterface } from "./RefundProcessingInterface";
 import { StaffPerformanceAnalytics } from "./StaffPerformanceAnalytics";
+import { StaffMenuGridOrderInterface } from "./StaffMenuGridOrderInterface";
+import { toast } from "sonner";
 
 interface AccountantDashboardProps {
   staffSession: StaffSession;
@@ -40,7 +45,14 @@ export default function AccountantDashboard({
 }: AccountantDashboardProps) {
   const [selectedPeriod, setSelectedPeriod] = useState("today");
   const [selectedReportType, setSelectedReportType] = useState("sales");
+  const [showMenuGrid, setShowMenuGrid] = useState(false);
   const { permissions } = staffSession;
+
+  // Handle order creation
+  const handleOrderCreated = (orderId: string) => {
+    toast.success("Order created successfully!");
+    setShowMenuGrid(false);
+  };
 
   // Mock data - in real implementation, this would come from API calls
   const mockFinancialStats = {
@@ -183,6 +195,65 @@ export default function AccountantDashboard({
 
   return (
     <div className="space-y-6">
+      {/* Header with Create Order Button */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold truncate">
+            Accountant Dashboard
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600 truncate">
+            Financial management and reporting
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <PermissionGuard
+            permissions={permissions}
+            requiredPermission="orders:create"
+          >
+            <Button
+              onClick={() => setShowMenuGrid(true)}
+              variant="default"
+              className="w-full sm:w-auto"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Create Order</span>
+              <span className="sm:hidden">New Order</span>
+            </Button>
+          </PermissionGuard>
+        </div>
+      </div>
+
+      {/* Menu Grid Order Interface */}
+      {showMenuGrid && (
+        <PermissionGuard
+          permissions={permissions}
+          requiredPermission="orders:create"
+        >
+          <Card className="mb-6">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingCart className="h-5 w-5" />
+                Create New Order
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowMenuGrid(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <StaffMenuGridOrderInterface
+                businessId={staffSession.business.id}
+                staffRole="accountant"
+                onOrderCreated={handleOrderCreated}
+              />
+            </CardContent>
+          </Card>
+        </PermissionGuard>
+      )}
+
       <Tabs defaultValue="reports" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="reports" className="flex items-center gap-2">

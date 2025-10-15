@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Wine, RefreshCw, Filter, AlertCircle, Package } from "lucide-react";
+import {
+  Wine,
+  RefreshCw,
+  Filter,
+  AlertCircle,
+  Package,
+  ShoppingCart,
+  X,
+  Plus,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import BarOrderProcessor from "./BarOrderProcessor";
 import BarInventoryManager from "./BarInventoryManager";
+import { StaffMenuGridOrderInterface } from "./StaffMenuGridOrderInterface";
 
 interface BarOrder {
   id: string;
@@ -48,13 +58,10 @@ interface BarOrderItem {
   preparation_notes?: string;
 }
 
+import { StaffSession } from "@/types/auth";
+
 interface BarDashboardProps {
-  staffSession: {
-    id: string;
-    staff_id: string;
-    business_id: string;
-    role: string;
-  };
+  staffSession: StaffSession;
 }
 
 export default function BarDashboard({ staffSession }: BarDashboardProps) {
@@ -63,7 +70,10 @@ export default function BarDashboard({ staffSession }: BarDashboardProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"orders" | "inventory">("orders");
+  const [activeTab, setActiveTab] = useState<
+    "orders" | "inventory" | "create-order"
+  >("orders");
+  const [showMenuGrid, setShowMenuGrid] = useState(false);
 
   // Fetch bar orders
   const fetchBarOrders = async () => {
@@ -120,7 +130,7 @@ export default function BarDashboard({ staffSession }: BarDashboardProps) {
         body: JSON.stringify({
           status,
           notes,
-          staff_id: staffSession.staff_id,
+          staff_id: staffSession.staff.id,
         }),
       });
 
@@ -154,7 +164,7 @@ export default function BarDashboard({ staffSession }: BarDashboardProps) {
           body: JSON.stringify({
             status,
             notes,
-            staff_id: staffSession.staff_id,
+            staff_id: staffSession.staff.id,
           }),
         }
       );
@@ -181,7 +191,7 @@ export default function BarDashboard({ staffSession }: BarDashboardProps) {
         },
         body: JSON.stringify({
           bar_notes: notes,
-          staff_id: staffSession.staff_id,
+          staff_id: staffSession.staff.id,
         }),
       });
 
@@ -207,7 +217,7 @@ export default function BarDashboard({ staffSession }: BarDashboardProps) {
         },
         body: JSON.stringify({
           priority_level: priority,
-          staff_id: staffSession.staff_id,
+          staff_id: staffSession.staff.id,
         }),
       });
 
@@ -232,7 +242,7 @@ export default function BarDashboard({ staffSession }: BarDashboardProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          staff_id: staffSession.staff_id,
+          staff_id: staffSession.staff.id,
         }),
       });
 
@@ -259,7 +269,7 @@ export default function BarDashboard({ staffSession }: BarDashboardProps) {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            staff_id: staffSession.staff_id,
+            staff_id: staffSession.staff.id,
           }),
         }
       );
@@ -274,6 +284,14 @@ export default function BarDashboard({ staffSession }: BarDashboardProps) {
       console.error("Error completing preparation:", error);
       throw error;
     }
+  };
+
+  // Handle order creation
+  const handleOrderCreated = (orderId: string) => {
+    toast.success("Order created successfully!");
+    setShowMenuGrid(false);
+    setActiveTab("orders");
+    fetchBarOrders(); // Refresh orders
   };
 
   // Calculate dashboard stats
@@ -323,17 +341,49 @@ export default function BarDashboard({ staffSession }: BarDashboardProps) {
           </div>
         </div>
 
-        <Button
-          onClick={fetchBarOrders}
-          disabled={refreshing}
-          variant="outline"
-        >
-          <RefreshCw
-            className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
-          />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setShowMenuGrid(true)} variant="default">
+            <Plus className="w-4 h-4 mr-2" />
+            Create Order
+          </Button>
+          <Button
+            onClick={fetchBarOrders}
+            disabled={refreshing}
+            variant="outline"
+          >
+            <RefreshCw
+              className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </Button>
+        </div>
       </div>
+
+      {/* Menu Grid Order Interface */}
+      {showMenuGrid && (
+        <Card className="mb-6">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              Create New Order
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowMenuGrid(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <StaffMenuGridOrderInterface
+              businessId={staffSession.business.id}
+              staffRole="bar"
+              onOrderCreated={handleOrderCreated}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tabs */}
       <Tabs

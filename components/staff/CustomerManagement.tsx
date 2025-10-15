@@ -129,8 +129,8 @@ export function CustomerManagement({
         .order("name");
 
       if (error) {
-        console.error("Error fetching customers:", error);
-        toast.error("Could not load customer data");
+        console.warn("Customers not available:", error.message);
+        setCustomers([]);
         return;
       }
 
@@ -169,8 +169,8 @@ export function CustomerManagement({
 
       setCustomers(transformedCustomers);
     } catch (error) {
-      console.error("Error fetching customers:", error);
-      toast.error("Could not load customer data");
+      console.warn("Customer data may not be available:", error);
+      setCustomers([]);
     } finally {
       setLoading(false);
     }

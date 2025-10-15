@@ -38,6 +38,13 @@ CREATE TABLE public.suppliers (
   current_balance numeric DEFAULT 0,
   rating integer CHECK (rating >= 1 AND rating <= 5),
   notes text,
+  -- Banking Information
+  bank_name text,
+  account_number text,
+  account_name text,
+  routing_number text,
+  swift_code text,
+  bank_address text,
   is_active boolean DEFAULT true,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),

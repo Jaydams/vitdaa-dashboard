@@ -22,6 +22,7 @@ import {
   Star,
   Zap,
   ShoppingCart,
+  X,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +31,20 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { MobileOrderManager } from "@/components/responsive/MobileOrderManager";
+import { useResponsive } from "@/components/responsive/ResponsiveDashboardProvider";
+import {
+  TouchButton,
+  TouchInput,
+} from "@/components/responsive/TouchOptimizedControls";
+import {
+  ResponsiveContainer,
+  ResponsiveGrid,
+} from "@/components/responsive/ResponsiveLayout";
+import {
+  AdaptiveStatsGrid,
+  AdaptiveContentSections,
+} from "@/components/responsive/AdaptiveLayouts";
 import { StaffSession } from "@/types/auth";
 import { PermissionGuard } from "./RoleBasedDashboard";
 import { toast } from "sonner";
@@ -42,6 +57,7 @@ import InventoryRequestForm from "./InventoryRequestForm";
 import InventoryRequestsList from "./InventoryRequestsList";
 import InventoryRequestNotifications from "./InventoryRequestNotifications";
 import KitchenOrderProcessor from "./KitchenOrderProcessor";
+import { StaffMenuGridOrderInterface } from "./StaffMenuGridOrderInterface";
 
 interface KitchenDashboardProps {
   staffSession: StaffSession;
@@ -111,6 +127,7 @@ export default function KitchenDashboard({
     "orders" | "inventory" | "requests"
   >("orders");
   const [refreshRequestsTrigger, setRefreshRequestsTrigger] = useState(0);
+  const [showMenuGrid, setShowMenuGrid] = useState(false);
   const [stats, setStats] = useState({
     pendingOrders: 0,
     preparingOrders: 0,
@@ -305,6 +322,13 @@ export default function KitchenDashboard({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Handle order creation
+  const handleOrderCreated = (orderId: string) => {
+    toast.success("Order created successfully!");
+    setShowMenuGrid(false);
+    fetchKitchenData(); // Refresh orders
   };
 
   const updateOrderStatus = async (
@@ -718,8 +742,18 @@ export default function KitchenDashboard({
             />
           </PermissionGuard>
           <Button
+            onClick={() => setShowMenuGrid(true)}
+            variant="default"
+            className="w-full sm:w-auto"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Create Order</span>
+            <span className="sm:hidden">New Order</span>
+          </Button>
+          <Button
             onClick={fetchKitchenData}
             disabled={isLoading}
+            variant="outline"
             className="w-full sm:w-auto"
           >
             <RefreshCw
@@ -730,6 +764,37 @@ export default function KitchenDashboard({
           </Button>
         </div>
       </div>
+
+      {/* Menu Grid Order Interface */}
+      {showMenuGrid && (
+        <PermissionGuard
+          permissions={permissions}
+          requiredPermission="orders:create"
+        >
+          <Card className="mb-6">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingCart className="h-5 w-5" />
+                Create New Order
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowMenuGrid(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <StaffMenuGridOrderInterface
+                businessId={staffSession.business.id}
+                staffRole="kitchen"
+                onOrderCreated={handleOrderCreated}
+              />
+            </CardContent>
+          </Card>
+        </PermissionGuard>
+      )}
 
       {/* Quick Stats - Responsive Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">

@@ -120,28 +120,31 @@ export function PaymentProcessing({
 
     setLoading(true);
     try {
-      // Create payment record
-      const { data: paymentRecord, error: paymentError } = await supabase
-        .from("payments")
-        .insert({
+      // Create payment record via API
+      const paymentResponse = await fetch("/api/payments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           order_id: order.id,
           amount: order.total,
           payment_method: paymentData.payment_method,
-          status: "completed",
           reference_number: paymentData.reference_number || null,
           amount_received: paymentData.amount_received || order.total,
           change_amount: change,
           notes: paymentData.notes || null,
-          processed_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
+        }),
+      });
 
-      if (paymentError) {
-        console.error("Error creating payment:", paymentError);
-        toast.error("Failed to process payment");
+      if (!paymentResponse.ok) {
+        const errorData = await paymentResponse.json();
+        console.error("Error creating payment:", errorData);
+        toast.error(errorData.error || "Failed to process payment");
         return;
       }
+
+      const { payment: paymentRecord } = await paymentResponse.json();
 
       // Update order status to completed/delivered
       const { error: orderError } = await supabase

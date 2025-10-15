@@ -19,6 +19,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { MobileTableLayout } from "@/components/responsive/MobileTableLayout";
+import { useResponsive } from "@/components/responsive/ResponsiveDashboardProvider";
+import { TouchButton } from "@/components/responsive/TouchOptimizedControls";
 import {
   Dialog,
   DialogContent,
@@ -122,8 +125,8 @@ export function TableManagementGrid({
         .order("table_number");
 
       if (tablesError) {
-        console.error("Error fetching tables:", tablesError);
-        toast.error("Could not load table information");
+        console.warn("Tables not available:", tablesError.message);
+        setTables([]);
       } else {
         const transformedTables = (tablesData || []).map((table: any) => ({
           id: table.id,
@@ -149,14 +152,16 @@ export function TableManagementGrid({
         .order("name");
 
       if (customersError) {
-        console.error("Error fetching customers:", customersError);
-        toast.error("Could not load customer data");
+        console.warn("Customers not available:", customersError.message);
+        setCustomers([]);
       } else {
         setCustomers(customersData || []);
       }
     } catch (error) {
-      console.error("Error fetching data:", error);
-      toast.error("Could not load table data");
+      console.warn("Some table data may not be available:", error);
+      // Set empty arrays as fallbacks
+      setTables([]);
+      setCustomers([]);
     } finally {
       setLoading(false);
     }

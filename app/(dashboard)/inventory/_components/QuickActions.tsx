@@ -1,6 +1,12 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, TrendingUp, AlertCircle } from "lucide-react";
 import Link from "next/link";
@@ -9,25 +15,27 @@ import { AddTransactionModal } from "../transactions/_components/AddTransactionM
 
 export function QuickActions() {
   return (
-    <Card>
+    <Card suppressHydrationWarning>
       <CardHeader>
         <CardTitle>Quick Actions</CardTitle>
-        <CardDescription>
-          Common inventory management tasks
-        </CardDescription>
+        <CardDescription>Common inventory management tasks</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid gap-3">
-          <AddItemModal onItemAdded={() => {
-            // This will trigger a re-render when an item is added
-            window.location.reload();
-          }} />
-          
-          <AddTransactionModal onTransactionAdded={() => {
-            // This will trigger a re-render when a transaction is added
-            window.location.reload();
-          }} />
-          
+          <AddItemModal
+            onItemAdded={() => {
+              // This will trigger a re-render when an item is added
+              window.location.reload();
+            }}
+          />
+
+          <AddTransactionModal
+            onTransactionAdded={() => {
+              // This will trigger a re-render when a transaction is added
+              window.location.reload();
+            }}
+          />
+
           <Link href="/inventory/alerts">
             <Button variant="outline" className="w-full justify-start">
               <AlertCircle className="mr-2 h-4 w-4" />

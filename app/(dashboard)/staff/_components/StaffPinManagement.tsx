@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Key, RotateCcw, Edit3, Info } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { RotateCcw, Edit3, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,6 +33,18 @@ export default function StaffPinManagement({ staff }: StaffPinManagementProps) {
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [newPin, setNewPin] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const pinInputRef = useRef<HTMLInputElement>(null);
+
+  // Focus the PIN input when the dialog opens
+  useEffect(() => {
+    if (isChangePinOpen && pinInputRef.current) {
+      // Small delay to ensure the dialog is fully rendered
+      const timer = setTimeout(() => {
+        pinInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isChangePinOpen]);
 
   const handleRetrievePin = async () => {
     setIsLoading(true);
@@ -280,15 +292,41 @@ export default function StaffPinManagement({ staff }: StaffPinManagementProps) {
             <div className="space-y-3">
               <Label htmlFor="newPin">New PIN</Label>
               <Input
+                ref={pinInputRef}
                 id="newPin"
                 type="password"
                 placeholder="Enter 4-8 digit PIN"
                 value={newPin}
-                onChange={(e) => setNewPin(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, ""); // Only allow digits
+                  setNewPin(value);
+                }}
+                onKeyDown={(e) => {
+                  // Allow only numbers, backspace, delete, tab, escape, enter
+                  if (
+                    !/[0-9]/.test(e.key) &&
+                    !["Backspace", "Delete", "Tab", "Escape", "Enter"].includes(
+                      e.key
+                    )
+                  ) {
+                    e.preventDefault();
+                  }
+                  // Handle Enter key to submit
+                  if (e.key === "Enter" && newPin && /^\d{4,8}$/.test(newPin)) {
+                    handleChangePin();
+                  }
+                }}
                 maxLength={8}
                 pattern="[0-9]*"
                 inputMode="numeric"
+                autoComplete="new-password"
+                autoFocus
+                disabled={isLoading}
+                className="text-center text-lg tracking-widest"
               />
+              <div className="text-xs text-muted-foreground text-center">
+                {newPin.length}/8 digits
+              </div>
               {newPin && !/^\d{4,8}$/.test(newPin) && (
                 <p className="text-sm text-destructive">
                   PIN must be 4-8 digits only

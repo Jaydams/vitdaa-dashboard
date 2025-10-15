@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { Plus } from "lucide-react";
 
 import {
@@ -15,7 +18,17 @@ interface StaffFiltersProps {
   onOpenCreateDialog?: () => void;
 }
 
-export default function StaffFilters({ onOpenCreateDialog }: StaffFiltersProps) {
+export default function StaffFilters({
+  onOpenCreateDialog,
+}: StaffFiltersProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedRole, setSelectedRole] = useState<string>("");
+
+  const handleReset = () => {
+    setSearchTerm("");
+    setSelectedRole("");
+  };
+
   return (
     <Card className="mb-5">
       <form className="flex flex-col md:flex-row gap-4 lg:gap-6">
@@ -23,9 +36,11 @@ export default function StaffFilters({ onOpenCreateDialog }: StaffFiltersProps) 
           type="search"
           placeholder="Search by name, email or phone"
           className="h-12 md:basis-1/3"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
 
-        <Select>
+        <Select value={selectedRole} onValueChange={setSelectedRole}>
           <SelectTrigger className="md:basis-1/3">
             <SelectValue placeholder="Role" />
           </SelectTrigger>
@@ -38,8 +53,8 @@ export default function StaffFilters({ onOpenCreateDialog }: StaffFiltersProps) 
           </SelectContent>
         </Select>
 
-        <Button 
-          size="lg" 
+        <Button
+          size="lg"
           className="h-12 md:basis-1/3 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white shadow-lg"
           onClick={onOpenCreateDialog}
           type="button"
@@ -48,10 +63,16 @@ export default function StaffFilters({ onOpenCreateDialog }: StaffFiltersProps) 
         </Button>
 
         <div className="flex flex-wrap sm:flex-nowrap gap-4">
-          <Button size="lg" className="flex-grow">
+          <Button size="lg" className="flex-grow" type="submit">
             Filter
           </Button>
-          <Button size="lg" variant="secondary" className="flex-grow">
+          <Button
+            size="lg"
+            variant="secondary"
+            className="flex-grow"
+            type="button"
+            onClick={handleReset}
+          >
             Reset
           </Button>
         </div>

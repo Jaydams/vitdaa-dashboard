@@ -10,6 +10,7 @@ import {
   BarChart3,
   FileText,
   ShoppingCart,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -57,6 +58,12 @@ async function InventorySidebar() {
       href: "/inventory/alerts",
       icon: AlertTriangle,
       description: "View and manage alerts",
+    },
+    {
+      title: "Suppliers",
+      href: "/inventory/suppliers",
+      icon: Users,
+      description: "Manage suppliers and vendors",
     },
     {
       title: "Transactions",

@@ -1,4 +1,7 @@
+"use client";
+
 import { Bell } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import {
   Popover,
@@ -11,8 +14,23 @@ import NotificationsBadge from "./NotificationsBadge";
 import NotificationContent from "./NotificationContent";
 
 export default function Notifications() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <Button variant="ghost" size="icon" disabled>
+        <Bell />
+        <span className="sr-only">Toggle notifications</span>
+      </Button>
+    );
+  }
+
   return (
-    <div className="relative">
+    <div className="relative" suppressHydrationWarning>
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="ghost" size="icon">

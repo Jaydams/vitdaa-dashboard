@@ -41,6 +41,13 @@ export function DateRangeFilter({
   isLoading = false,
   useUrlState = true,
 }: DateRangeFilterPropsWithUrl) {
+  // Handle hydration
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Use URL state management if enabled, otherwise use props
   const urlState = useFilterUrlState();
 
@@ -143,8 +150,28 @@ export function DateRangeFilter({
     return preset?.label || "Select Period";
   };
 
+  // Show loading state during hydration
+  if (!mounted) {
+    return (
+      <Card className="w-full">
+        <CardHeader className="pb-3 px-4 sm:px-6">
+          <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
+            <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+            <span className="truncate">Filter by Date Range</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 px-4 sm:px-6">
+          <div className="space-y-2">
+            <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+            <div className="h-12 w-full bg-muted animate-pulse rounded" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card className="w-full">
+    <Card className="w-full" suppressHydrationWarning>
       <CardHeader className="pb-3 px-4 sm:px-6">
         <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
           <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
@@ -173,6 +200,7 @@ export function DateRangeFilter({
               )}
               aria-label="Select date range period"
               aria-describedby="period-help"
+              suppressHydrationWarning
             >
               <SelectValue placeholder="Select a time period">
                 <span className="truncate">{getFilterDisplayValue()}</span>

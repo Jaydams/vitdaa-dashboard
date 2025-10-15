@@ -1,87 +1,139 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-
-interface InventoryRequestItem {
-  inventory_item_id: string;
-  requested_quantity: number;
-  estimated_unit_cost?: number;
-  supplier_id?: string;
-  notes?: string;
-}
-
-interface CreateInventoryRequestBody {
-  business_id: string;
-  requested_by_staff_id: string;
-  urgency_level?: string;
-  justification?: string;
-  items: InventoryRequestItem[];
-  staff_session_id?: string;
-  start_time?: number;
-}
+import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { searchParams } = new URL(request.url);
 
-    // Get query parameters
-    const businessId = searchParams.get("business_id");
-    const staffId = searchParams.get("staff_id");
-    const status = searchParams.get("status");
-    const urgency = searchParams.get("urgency");
-    const limit = parseInt(searchParams.get("limit") || "50");
-    const offset = parseInt(searchParams.get("offset") || "0");
+    // Get authenticated user
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-    if (!businessId) {
+    if (authError || !user) {
       return NextResponse.json(
-        { error: "Business ID is required" },
-        { status: 400 }
+        { error: "Authentication required" },
+        { status: 401 }
       );
     }
+
+    // Get business owner
+    const { data: businessOwner, error: businessError } = await supabase
+      .from("business_owner")
+      .select("id")
+      .eq("email", user.email)
+      .single();
+
+    if (businessError || !businessOwner) {
+      return NextResponse.json(
+        { error: "Business owner not found" },
+        { status: 404 }
+      );
+    }
+
+    // Parse query parameters
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const offset = parseInt(searchParams.get("offset") || "0");
+    const status = searchParams.get("status");
+    const urgency = searchParams.get("urgency");
 
     // Build query
     let query = supabase
       .from("inventory_requests")
       .select(
         `
-        *,
-        requested_by_staff:staff!requested_by_staff_id(id, first_name, last_name, role),
-        approved_by_admin:business_owner!approved_by_admin_id(id, first_name, last_name),
-        inventory_request_items(
-          *,
-          inventory_item:inventory_items(id, name, unit_of_measure, current_stock),
-          supplier:suppliers(id, name)
+        id,
+        business_id,
+        requested_by_staff_id,
+        status,
+        urgency_level,
+        justification,
+        total_estimated_cost,
+        admin_notes,
+        approved_by_admin_id,
+        approved_at,
+        denied_reason,
+        created_at,
+        updated_at,
+        inventory_request_items (
+          id,
+          request_id,
+          inventory_item_id,
+          requested_quantity,
+          approved_quantity,
+          estimated_unit_cost,
+          approved_unit_cost,
+          supplier_id,
+          notes,
+          inventory_item:inventory_items (
+            id,
+            name,
+            unit_of_measure,
+            current_stock
+          ),
+          supplier:suppliers (
+            id,
+            name
+          )
+        ),
+        requested_by_staff:staff!inventory_requests_requested_by_staff_id_fkey (
+          id,
+          first_name,
+          last_name,
+          role
+        ),
+        approved_by_admin:staff!inventory_requests_approved_by_admin_id_fkey (
+          id,
+          first_name,
+          last_name
         )
       `
       )
-      .eq("business_id", businessId)
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1);
+      .eq("business_id", businessOwner.id)
+      .order("created_at", { ascending: false });
 
     // Apply filters
-    if (staffId) {
-      query = query.eq("requested_by_staff_id", staffId);
-    }
-    if (status) {
+    if (status && status !== "all") {
       query = query.eq("status", status);
     }
-    if (urgency) {
+
+    if (urgency && urgency !== "all") {
       query = query.eq("urgency_level", urgency);
     }
 
-    const { data: requests, error } = await query;
+    // Apply pagination
+    query = query.range(offset, offset + limit - 1);
 
-    if (error) {
-      console.error("Error fetching inventory requests:", error);
+    const { data: requests, error: requestsError } = await query;
+
+    if (requestsError) {
+      console.error("Error fetching inventory requests:", requestsError);
       return NextResponse.json(
         { error: "Failed to fetch inventory requests" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ requests });
+    // Get total count for pagination
+    const { count, error: countError } = await supabase
+      .from("inventory_requests")
+      .select("*", { count: "exact", head: true })
+      .eq("business_id", businessOwner.id);
+
+    if (countError) {
+      console.error("Error getting requests count:", countError);
+    }
+
+    return NextResponse.json({
+      requests: requests || [],
+      total: count || 0,
+      limit,
+      offset,
+    });
   } catch (error) {
-    console.error("Unexpected error:", error);
+    console.error("Error in inventory requests API:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -92,67 +144,77 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const body: CreateInventoryRequestBody = await request.json();
 
+    // Get authenticated user
     const {
-      business_id,
-      requested_by_staff_id,
-      urgency_level = "normal",
-      justification,
-      items,
-    } = body;
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    // Get business owner
+    const { data: businessOwner, error: businessError } = await supabase
+      .from("business_owner")
+      .select("id")
+      .eq("email", user.email)
+      .single();
+
+    if (businessError || !businessOwner) {
+      return NextResponse.json(
+        { error: "Business owner not found" },
+        { status: 404 }
+      );
+    }
+
+    // Get staff member (assuming the user is also a staff member)
+    const { data: staff, error: staffError } = await supabase
+      .from("staff")
+      .select("id")
+      .eq("email", user.email)
+      .eq("business_id", businessOwner.id)
+      .single();
+
+    if (staffError || !staff) {
+      return NextResponse.json(
+        { error: "Staff member not found" },
+        { status: 404 }
+      );
+    }
+
+    const body = await request.json();
+    const { urgency_level, justification, items } = body;
 
     // Validate required fields
-    if (
-      !business_id ||
-      !requested_by_staff_id ||
-      !items ||
-      !Array.isArray(items) ||
-      items.length === 0
-    ) {
+    if (!urgency_level || !justification || !items || items.length === 0) {
       return NextResponse.json(
-        {
-          error:
-            "Missing required fields: business_id, requested_by_staff_id, items",
-        },
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // Validate items
-    for (const item of items) {
-      if (
-        !item.inventory_item_id ||
-        !item.requested_quantity ||
-        item.requested_quantity <= 0
-      ) {
-        return NextResponse.json(
-          {
-            error:
-              "Each item must have inventory_item_id and positive requested_quantity",
-          },
-          { status: 400 }
-        );
-      }
-    }
-
     // Calculate total estimated cost
-    let total_estimated_cost = 0;
-    for (const item of items) {
-      const cost = (item.estimated_unit_cost || 0) * item.requested_quantity;
-      total_estimated_cost += cost;
-    }
+    const total_estimated_cost = items.reduce(
+      (total: number, item: any) =>
+        total + item.requested_quantity * item.estimated_unit_cost,
+      0
+    );
 
     // Create the inventory request
-    const { data: inventoryRequest, error: requestError } = await supabase
+    const { data: newRequest, error: requestError } = await supabase
       .from("inventory_requests")
       .insert({
-        business_id,
-        requested_by_staff_id,
+        business_id: businessOwner.id,
+        requested_by_staff_id: staff.id,
+        status: "pending",
         urgency_level,
         justification,
         total_estimated_cost,
-        status: "pending",
       })
       .select()
       .single();
@@ -165,12 +227,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create request items
-    const requestItems = items.map((item) => ({
-      request_id: inventoryRequest.id,
+    // Create the request items
+    const requestItems = items.map((item: any) => ({
+      request_id: newRequest.id,
       inventory_item_id: item.inventory_item_id,
       requested_quantity: item.requested_quantity,
-      estimated_unit_cost: item.estimated_unit_cost || 0,
+      estimated_unit_cost: item.estimated_unit_cost,
       supplier_id: item.supplier_id || null,
       notes: item.notes || null,
     }));
@@ -180,61 +242,25 @@ export async function POST(request: NextRequest) {
       .insert(requestItems);
 
     if (itemsError) {
-      console.error("Error creating request items:", itemsError);
-      // Rollback the request
+      console.error("Error creating inventory request items:", itemsError);
+      // Clean up the request if items creation failed
       await supabase
         .from("inventory_requests")
         .delete()
-        .eq("id", inventoryRequest.id);
+        .eq("id", newRequest.id);
 
       return NextResponse.json(
-        { error: "Failed to create request items" },
+        { error: "Failed to create inventory request items" },
         { status: 500 }
       );
     }
 
-    // Log staff activity
-    await supabase.from("staff_activity_logs").insert({
-      staff_id: requested_by_staff_id,
-      staff_session_id: body.staff_session_id || null,
-      business_id,
-      activity_type: "inventory_requested",
-      activity_details: {
-        request_id: inventoryRequest.id,
-        items_count: items.length,
-        total_estimated_cost,
-        urgency_level,
-      },
-      performance_metrics: {
-        response_time: Date.now() - (body.start_time || Date.now()),
-      },
+    return NextResponse.json({
+      message: "Inventory request created successfully",
+      request: newRequest,
     });
-
-    // Fetch the complete request with items
-    const { data: completeRequest, error: fetchError } = await supabase
-      .from("inventory_requests")
-      .select(
-        `
-        *,
-        requested_by_staff:staff!requested_by_staff_id(id, first_name, last_name, role),
-        inventory_request_items(
-          *,
-          inventory_item:inventory_items(id, name, unit_of_measure, current_stock),
-          supplier:suppliers(id, name)
-        )
-      `
-      )
-      .eq("id", inventoryRequest.id)
-      .single();
-
-    if (fetchError) {
-      console.error("Error fetching complete request:", fetchError);
-      return NextResponse.json({ request: inventoryRequest });
-    }
-
-    return NextResponse.json({ request: completeRequest }, { status: 201 });
   } catch (error) {
-    console.error("Unexpected error:", error);
+    console.error("Error in inventory requests POST API:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
