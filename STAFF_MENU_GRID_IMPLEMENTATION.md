@@ -579,3 +579,11 @@ const pageNumbers = Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
 - `components/staff/StaffMenuGridOrderInterface.tsx`: Complete redesign with pagination and compact layout
 
 The staff menu grid now provides a much more efficient and user-friendly experience for order creation across all staff dashboards.
+## Quick Actions Cleanup: Removed Problematic Features
+
+### Issue Description
+The "Quick Order" and "Customer Lookup" buttons in the Reception Dashboard's Quick Actions section were causing console errors:
+- **Error**: `Error fetching customers: {}` from ReceptionOrderCreationModal
+- **Root Cause**: The ReceptionOrderCreationModal component was trying to fetch customer data from database tables that may not exist or have API connectivity issues
+
+### Solution Appl

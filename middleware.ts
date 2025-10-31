@@ -7,7 +7,7 @@ export async function middleware(request: NextRequest) {
 
   // Check if there's an active staff session
   const staffSessionToken = request.cookies.get("staff_session_token")?.value;
-  
+
   // Allow staff access to inventory APIs
   if (pathname.startsWith("/api/inventory")) {
     return NextResponse.next();
@@ -34,17 +34,19 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith("/api/staff/signout") ||
       pathname.startsWith("/api/staff/switch-to-admin") ||
       pathname.startsWith("/api/staff/reception") ||
+      pathname.startsWith("/api/tickets") ||
+      pathname.startsWith("/api/orders") ||
       pathname === "/login"
     ) {
       // Allow admin authentication routes, staff signout, and main login
       // Don't validate session here - let the routes handle it
       console.log(`[Middleware] Allowing access to admin route: ${pathname}`);
-      
+
       // For API routes, don't apply Supabase authentication
       if (pathname.startsWith("/api/")) {
         return NextResponse.next();
       }
-      
+
       return await updateSession(request);
     } else {
       // For all other routes, validate the session first

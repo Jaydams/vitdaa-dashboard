@@ -3,7 +3,6 @@ import { Metadata } from "next";
 import PageTitle from "@/components/shared/PageTitle";
 import AllOrders from "./_components/orders-table";
 import OrderFilters from "./_components/OrderFilters";
-import { CreateOrderButton } from "./_components/CreateOrderButton";
 
 export const metadata: Metadata = {
   title: "Orders",
@@ -11,17 +10,18 @@ export const metadata: Metadata = {
 
 export default async function OrdersPage() {
   return (
-    <section>
-      <div className="flex items-center justify-between mb-6">
-        <PageTitle>Orders</PageTitle>
-        <CreateOrderButton />
-      </div>
+    <div className="px-4 py-6 md:px-6 md:py-6 lg:px-8 lg:py-8">
+      <section>
+        <div className="flex items-center justify-between mb-6">
+          <PageTitle>Orders</PageTitle>
+        </div>
 
-      <div className="mb-6">
-        <OrderFilters />
-      </div>
+        <div className="mb-6">
+          <OrderFilters />
+        </div>
 
-      <AllOrders perPage={20} />
-    </section>
+        <AllOrders perPage={20} />
+      </section>
+    </div>
   );
 }

@@ -89,8 +89,10 @@ export function EditItemForm({ businessId, item }: EditItemFormProps) {
         description: formData.description || null,
         sku: formData.sku || null,
         barcode: formData.barcode || null,
-        category_id: formData.category_id || null,
-        supplier_id: formData.supplier_id || null,
+        category_id:
+          formData.category_id === "none" ? null : formData.category_id || null,
+        supplier_id:
+          formData.supplier_id === "none" ? null : formData.supplier_id || null,
         unit_of_measure: formData.unit_of_measure,
         minimum_stock: parseFloat(formData.minimum_stock) || 0,
         maximum_stock: parseFloat(formData.maximum_stock) || null,
@@ -206,7 +208,7 @@ export function EditItemForm({ businessId, item }: EditItemFormProps) {
               <SelectValue placeholder="Select a category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No Category</SelectItem>
+              <SelectItem value="none">No Category</SelectItem>
               {categories.map((category) => (
                 <SelectItem key={category.id} value={category.id}>
                   {category.name}
@@ -226,7 +228,7 @@ export function EditItemForm({ businessId, item }: EditItemFormProps) {
               <SelectValue placeholder="Select a supplier" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No Supplier</SelectItem>
+              <SelectItem value="none">No Supplier</SelectItem>
               {suppliers.map((supplier) => (
                 <SelectItem key={supplier.id} value={supplier.id}>
                   {supplier.name}

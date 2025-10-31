@@ -106,7 +106,7 @@ vi.mock("@/lib/supabase/client", () => ({
 }));
 
 // Import components after mocking
-import ReceptionDashboard from "@/components/staff/ReceptionDashboard";
+import { ReceptionDashboardWithSync } from "@/components/staff/ReceptionDashboardWithSync";
 import KitchenDashboard from "@/components/staff/KitchenDashboard";
 import BarDashboard from "@/components/staff/BarDashboard";
 

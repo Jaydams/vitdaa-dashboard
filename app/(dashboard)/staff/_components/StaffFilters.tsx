@@ -55,7 +55,7 @@ export default function StaffFilters({
 
         <Button
           size="lg"
-          className="h-12 md:basis-1/3 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white shadow-lg"
+          className="h-12 md:basis-1/3 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg"
           onClick={onOpenCreateDialog}
           type="button"
         >

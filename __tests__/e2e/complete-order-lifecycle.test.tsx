@@ -623,7 +623,7 @@ vi.mock("@/components/staff/AccountantDashboard", () => ({
 }));
 
 // Import components after mocking
-import ReceptionDashboard from "@/components/staff/ReceptionDashboard";
+import { ReceptionDashboardWithSync } from "@/components/staff/ReceptionDashboardWithSync";
 import KitchenDashboard from "@/components/staff/KitchenDashboard";
 import BarDashboard from "@/components/staff/BarDashboard";
 import AccountantDashboard from "@/components/staff/AccountantDashboard";

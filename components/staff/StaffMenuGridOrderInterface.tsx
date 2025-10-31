@@ -44,7 +44,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MenuGrid } from "@/components/menu-grid/MenuGrid";
 import { MenuItemCard } from "@/components/menu-grid/MenuItemCard";
 import { MenuGridSkeleton } from "@/components/menu-grid/MenuGridSkeleton";
-import { useOrderState } from "@/hooks/use-order-state";
+import { useOrderStore } from "@/stores/order-store";
 import { useBusinessSettings } from "@/hooks/use-business-settings";
 import { formatAmount } from "@/helpers/formatAmount";
 import { createOrder } from "@/actions/order-actions";
@@ -81,8 +81,9 @@ interface DeliveryLocation {
 
 interface Customer {
   id: string;
-  name: string;
-  phone?: string;
+  first_name: string;
+  last_name: string;
+  phone_number?: string;
   email?: string;
   address?: string;
 }
@@ -92,6 +93,8 @@ interface StaffMenuGridOrderInterfaceProps {
   staffRole: "reception" | "bar" | "kitchen" | "accountant";
   onOrderCreated?: (orderId: string) => void;
   className?: string;
+  mobileMode?: boolean;
+  onItemAdded?: () => void;
 }
 
 export function StaffMenuGridOrderInterface({
@@ -99,6 +102,8 @@ export function StaffMenuGridOrderInterface({
   staffRole,
   onOrderCreated,
   className,
+  mobileMode = false,
+  onItemAdded,
 }: StaffMenuGridOrderInterfaceProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -132,21 +137,24 @@ export function StaffMenuGridOrderInterface({
   const supabase = createClient();
   const { settings: businessSettings } = useBusinessSettings();
 
-  // Order state management
+  // Order state management using Zustand store
   const {
-    orderItems,
-    isOrderPanelVisible,
+    currentOrder,
     addItem,
     updateQuantity,
     removeItem,
-    clearOrder,
-    toggleOrderPanel,
-    calculations,
-    itemCount,
-  } = useOrderState({
-    vatRate: businessSettings?.vat_rate ?? 7.5,
-    serviceChargeRate: businessSettings?.service_charge_rate ?? 2.5,
-  });
+    clearCurrentOrder,
+  } = useOrderStore();
+
+  // Calculate derived values from current order
+  const orderItems = currentOrder?.items || [];
+  const itemCount = orderItems.reduce((sum, item) => sum + item.quantity, 0);
+  const calculations = currentOrder?.calculations || {
+    subtotal: 0,
+    vatAmount: 0,
+    serviceChargeAmount: 0,
+    total: 0,
+  };
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -205,9 +213,9 @@ export function StaffMenuGridOrderInterface({
       // Fetch customers
       const { data: customersData } = await supabase
         .from("customers")
-        .select("id, name, phone, email, address")
+        .select("id, first_name, last_name, phone_number, email, address")
         .eq("business_id", businessId)
-        .order("name");
+        .order("first_name");
 
       setCustomers(customersData || []);
 
@@ -242,10 +250,18 @@ export function StaffMenuGridOrderInterface({
   // Handle menu item click
   const handleMenuItemClick = useCallback(
     (item: MenuItem) => {
-      addItem(item);
+      console.log("StaffMenuGridOrderInterface - Adding item:", item);
+      addItem({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        image_url: item.image_url,
+      });
+      console.log("StaffMenuGridOrderInterface - Item added, calling toast");
       toast.success(`${item.name} added to order`);
+      onItemAdded?.();
     },
-    [addItem]
+    [addItem, onItemAdded]
   );
 
   // Handle order completion
@@ -286,13 +302,19 @@ export function StaffMenuGridOrderInterface({
           diningOption === "delivery" ? selectedDeliveryLocationId : undefined,
         payment_method: paymentMethod,
         notes: orderNotes || undefined,
-        items: orderItems,
+        items: orderItems.map((item) => ({
+          menu_item_id: item.menu_item_id,
+          menu_item_name: item.menu_item_name,
+          menu_item_price: item.menu_item_price,
+          quantity: item.quantity,
+          total_price: item.menu_item_price * item.quantity,
+        })),
         subtotal: calculations.subtotal,
         vat_amount: calculations.vatAmount,
         service_charge: calculations.serviceChargeAmount,
         total_amount: calculations.total,
-        vat_rate: calculations.vatRate,
-        service_charge_rate: calculations.serviceChargeRate,
+        vat_rate: 7.5,
+        service_charge_rate: 5.0,
         takeaway_packs: 0,
         takeaway_pack_price: 0,
         delivery_fee:
@@ -307,7 +329,7 @@ export function StaffMenuGridOrderInterface({
 
       if (result?.orderId) {
         toast.success("Order created successfully!");
-        clearOrder();
+        clearCurrentOrder();
         setIsOrderModalOpen(false);
         resetOrderForm();
         onOrderCreated?.(result.orderId);
@@ -391,7 +413,12 @@ export function StaffMenuGridOrderInterface({
       </Card>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-4 min-h-0">
+      <div
+        className={cn(
+          "flex-1 flex flex-col gap-4 min-h-0",
+          mobileMode ? "flex-col" : "lg:flex-row"
+        )}
+      >
         {/* Menu Grid Section */}
         <div className="flex-1 flex flex-col min-h-0">
           {/* Menu Items Display */}
@@ -562,149 +589,145 @@ export function StaffMenuGridOrderInterface({
           </Card>
         </div>
 
-        {/* Fixed Order Panel */}
-        <div className="w-full lg:w-80 xl:w-96">
-          <Card className="h-full flex flex-col">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <ShoppingCart className="h-5 w-5" />
-                Order
-                {itemCount > 0 && (
-                  <Badge variant="secondary" className="ml-1">
-                    {itemCount}
-                  </Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
+        {/* Fixed Order Panel - Hidden in mobile mode */}
+        {!mobileMode && (
+          <div className="w-full lg:w-80 xl:w-96">
+            <Card className="h-full flex flex-col">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <ShoppingCart className="h-5 w-5" />
+                  Order
+                  {itemCount > 0 && (
+                    <Badge variant="secondary" className="ml-1">
+                      {itemCount}
+                    </Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
 
-            <CardContent className="flex-1 flex flex-col p-0 min-h-0">
-              {orderItems.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                  <ShoppingCart className="h-10 w-10 text-muted-foreground mb-3" />
-                  <h4 className="font-medium mb-1">No items selected</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Click on menu items to add them
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {/* Order Items - Scrollable */}
-                  <ScrollArea className="flex-1 px-4">
-                    <div className="space-y-2 py-2">
-                      {orderItems.map((item) => (
-                        <div
-                          key={item.menu_item_id}
-                          className="flex items-center gap-2 p-2 border rounded-lg"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-sm truncate">
-                              {item.menu_item_name}
-                            </h4>
-                            <p className="text-xs text-muted-foreground">
-                              {formatAmount(item.menu_item_price)} each
-                            </p>
-                          </div>
-
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={() =>
-                                updateQuantity(
-                                  item.menu_item_id,
-                                  item.quantity - 1
-                                )
-                              }
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <span className="w-6 text-center text-sm">
-                              {item.quantity}
-                            </span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={() =>
-                                updateQuantity(
-                                  item.menu_item_id,
-                                  item.quantity + 1
-                                )
-                              }
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
-
-                          <div className="text-right min-w-0">
-                            <p className="font-medium text-sm">
-                              {formatAmount(item.total_price)}
-                            </p>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-4 w-4 p-0"
-                              onClick={() => removeItem(item.menu_item_id)}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-
-                  {/* Fixed Order Summary */}
-                  <div className="border-t bg-card">
-                    <div className="p-4 space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Subtotal:</span>
-                        <span>{formatAmount(calculations.subtotal)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>VAT ({calculations.vatRate}%):</span>
-                        <span>{formatAmount(calculations.vatAmount)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>
-                          Service Charge ({calculations.serviceChargeRate}%):
-                        </span>
-                        <span>
-                          {formatAmount(calculations.serviceChargeAmount)}
-                        </span>
-                      </div>
-                      <Separator />
-                      <div className="flex justify-between font-semibold text-lg">
-                        <span>Total:</span>
-                        <span>{formatAmount(calculations.total)}</span>
-                      </div>
-                    </div>
-
-                    {/* Fixed Action Buttons */}
-                    <div className="p-4 pt-0 space-y-2">
-                      <Button
-                        onClick={handleCompleteOrder}
-                        className="w-full"
-                        size="lg"
-                      >
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        Complete Order
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={clearOrder}
-                        className="w-full"
-                      >
-                        Clear Order
-                      </Button>
-                    </div>
+              <CardContent className="flex-1 flex flex-col p-0 min-h-0">
+                {orderItems.length === 0 ? (
+                  <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                    <ShoppingCart className="h-10 w-10 text-muted-foreground mb-3" />
+                    <h4 className="font-medium mb-1">No items selected</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Click on menu items to add them
+                    </p>
                   </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                ) : (
+                  <>
+                    {/* Order Items - Scrollable */}
+                    <ScrollArea className="flex-1 px-4">
+                      <div className="space-y-2 py-2">
+                        {orderItems.map((item) => (
+                          <div
+                            key={item.menu_item_id}
+                            className="flex items-center gap-2 p-2 border rounded-lg"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-sm truncate">
+                                {item.menu_item_name}
+                              </h4>
+                              <p className="text-xs text-muted-foreground">
+                                {formatAmount(item.menu_item_price)} each
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() =>
+                                  updateQuantity(item.id, item.quantity - 1)
+                                }
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <span className="w-6 text-center text-sm">
+                                {item.quantity}
+                              </span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() =>
+                                  updateQuantity(item.id, item.quantity + 1)
+                                }
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+
+                            <div className="text-right min-w-0">
+                              <p className="font-medium text-sm">
+                                {formatAmount(
+                                  item.menu_item_price * item.quantity
+                                )}
+                              </p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-4 w-4 p-0"
+                                onClick={() => removeItem(item.id)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+
+                    {/* Fixed Order Summary */}
+                    <div className="border-t bg-card">
+                      <div className="p-4 space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Subtotal:</span>
+                          <span>{formatAmount(calculations.subtotal)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>VAT (7.5%):</span>
+                          <span>{formatAmount(calculations.vatAmount)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Service Charge (5%):</span>
+                          <span>
+                            {formatAmount(calculations.serviceChargeAmount)}
+                          </span>
+                        </div>
+                        <Separator />
+                        <div className="flex justify-between font-semibold text-lg">
+                          <span>Total:</span>
+                          <span>{formatAmount(calculations.total)}</span>
+                        </div>
+                      </div>
+
+                      {/* Fixed Action Buttons */}
+                      <div className="p-4 pt-0 space-y-2">
+                        <Button
+                          onClick={handleCompleteOrder}
+                          className="w-full"
+                          size="lg"
+                        >
+                          <CreditCard className="h-4 w-4 mr-2" />
+                          Complete Order
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={clearCurrentOrder}
+                          className="w-full"
+                        >
+                          Clear Order
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
 
       {/* Order Completion Modal */}
@@ -862,13 +885,11 @@ export function StaffMenuGridOrderInterface({
                   <span>{formatAmount(calculations.subtotal)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>VAT ({calculations.vatRate}%):</span>
+                  <span>VAT (7.5%):</span>
                   <span>{formatAmount(calculations.vatAmount)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>
-                    Service Charge ({calculations.serviceChargeRate}%):
-                  </span>
+                  <span>Service Charge (5%):</span>
                   <span>{formatAmount(calculations.serviceChargeAmount)}</span>
                 </div>
                 <Separator />

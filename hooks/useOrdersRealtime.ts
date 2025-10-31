@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Order } from "@/types/order";
 import { PaginationProps } from "@/types/pagination";
@@ -41,7 +41,7 @@ export function useOrdersRealtime({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const loadOrders = async () => {
     try {

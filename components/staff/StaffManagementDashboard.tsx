@@ -149,8 +149,8 @@ export function StaffManagementDashboard({
     new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
   );
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
-  const [roleFilter, setRoleFilter] = useState<string>("");
-  const [performanceFilter, setPerformanceFilter] = useState<string>("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [performanceFilter, setPerformanceFilter] = useState<string>("all");
   const [expandedStaff, setExpandedStaff] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -380,7 +380,7 @@ export function StaffManagementDashboard({
                   <SelectValue placeholder="All roles" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Roles</SelectItem>
+                  <SelectItem value="all">All Roles</SelectItem>
                   <SelectItem value="reception">Reception</SelectItem>
                   <SelectItem value="kitchen">Kitchen</SelectItem>
                   <SelectItem value="bar">Bar</SelectItem>
@@ -399,7 +399,7 @@ export function StaffManagementDashboard({
                   <SelectValue placeholder="All levels" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Levels</SelectItem>
+                  <SelectItem value="all">All Levels</SelectItem>
                   <SelectItem value="excellent">Excellent</SelectItem>
                   <SelectItem value="good">Good</SelectItem>
                   <SelectItem value="average">Average</SelectItem>

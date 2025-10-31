@@ -1,18 +1,11 @@
 import Link from "next/link";
-import { Printer, ZoomIn } from "lucide-react";
+import { Printer, Eye, Download } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -32,21 +25,10 @@ import {
   downloadInvoiceAsCSV,
 } from "@/lib/invoice-utils";
 
-import { ORDER_STATUSES } from "@/constants/orders";
 import { OrderBadgeVariants } from "@/constants/badge";
-import { Order, OrderStatus } from "@/types/order";
+import { Order } from "@/types/order";
 import { SkeletonColumn } from "@/types/skeleton";
-import { updateOrderStatus } from "@/actions/order-actions";
 import { toast } from "sonner";
-
-const changeStatus = async (value: OrderStatus, orderId: string) => {
-  try {
-    await updateOrderStatus(orderId, value);
-    toast.success("Order status updated successfully");
-  } catch (error) {
-    toast.error("Failed to update order status");
-  }
-};
 
 const handlePrintInvoice = (order: Order) => {
   try {
@@ -133,29 +115,28 @@ export const columns: ColumnDef<Order>[] = [
   {
     header: "action",
     cell: ({ row }) => {
-      const orderId = row.original.id;
+      const order = row.original;
 
       return (
         <div onClick={(e) => e.stopPropagation()}>
-          <Select
-            onValueChange={(value: OrderStatus) => changeStatus(value, orderId)}
-          >
-            <SelectTrigger className="capitalize">
-              <SelectValue placeholder={row.original.status} />
-            </SelectTrigger>
-
-            <SelectContent>
-              {ORDER_STATUSES.map((badgeStatus) => (
-                <SelectItem
-                  value={badgeStatus}
-                  key={badgeStatus}
-                  className="capitalize"
-                >
-                  {badgeStatus}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className="text-foreground"
+              >
+                <Link href={`/orders/${order.id}`}>
+                  <Eye className="size-4 mr-2" />
+                  View Details
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>View Order Details</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       );
     },
@@ -190,23 +171,16 @@ export const columns: ColumnDef<Order>[] = [
 
           {/* Download Dropdown */}
           <DropdownMenu>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-foreground"
-                  >
-                    <ZoomIn className="size-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-
-              <TooltipContent>
-                <p>Download Options</p>
-              </TooltipContent>
-            </Tooltip>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-foreground"
+                title="Download Options"
+              >
+                <Download className="size-5" />
+              </Button>
+            </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => handleDownloadPDF(order)}>
@@ -217,9 +191,6 @@ export const columns: ColumnDef<Order>[] = [
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleDownloadCSV(order)}>
                 Download as CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href={`/orders/${order.id}`}>View Details</Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -256,7 +227,7 @@ export const skeletonColumns: SkeletonColumn[] = [
   },
   {
     header: "action",
-    cell: <Skeleton className="w-24 h-10" />,
+    cell: <Skeleton className="w-28 h-8" />,
   },
   {
     header: "invoice",

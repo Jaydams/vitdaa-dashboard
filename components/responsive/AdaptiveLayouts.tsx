@@ -69,17 +69,7 @@ export function AdaptiveDashboardLayout({
         )}
 
         {/* Main content */}
-        <main
-          className={cn(
-            "adaptive-content flex-1 overflow-auto",
-            // Mobile: Full width with padding
-            isMobile && "px-4 pb-4",
-            // Tablet: Medium padding
-            isTablet && "px-6 pb-6",
-            // Desktop: Standard padding
-            !isMobile && !isTablet && "px-8 pb-8"
-          )}
-        >
+        <main className="adaptive-content flex-1 overflow-auto">
           {children}
         </main>
 

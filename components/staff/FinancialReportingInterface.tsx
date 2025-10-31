@@ -105,8 +105,8 @@ export function FinancialReportingInterface({
   // Filters
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
-  const [paymentMethod, setPaymentMethod] = useState<string>("");
-  const [status, setStatus] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<string>("all");
+  const [status, setStatus] = useState<string>("all");
   const [reportType, setReportType] = useState<string>("daily");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -445,7 +445,7 @@ export function FinancialReportingInterface({
                   <SelectValue placeholder="All methods" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Methods</SelectItem>
+                  <SelectItem value="all">All Methods</SelectItem>
                   <SelectItem value="cash">Cash</SelectItem>
                   <SelectItem value="card">Card</SelectItem>
                   <SelectItem value="wallet">Wallet</SelectItem>
@@ -460,7 +460,7 @@ export function FinancialReportingInterface({
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="refunded">Refunded</SelectItem>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
@@ -59,7 +59,7 @@ export default function OrderNotificationModal({
   );
   const [audioEnabled, setAudioEnabled] = useState(true);
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   // Audio notification
   const playNotificationSound = () => {

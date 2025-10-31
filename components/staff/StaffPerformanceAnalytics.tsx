@@ -94,7 +94,7 @@ export function StaffPerformanceAnalytics({
     null
   );
   const [loading, setLoading] = useState(false);
-  const [selectedStaff, setSelectedStaff] = useState<string>("");
+  const [selectedStaff, setSelectedStaff] = useState<string>("all");
   const [startDate, setStartDate] = useState<Date | undefined>(
     new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
   );
@@ -320,7 +320,7 @@ export function StaffPerformanceAnalytics({
                   <SelectValue placeholder="All staff" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Staff</SelectItem>
+                  <SelectItem value="all">All Staff</SelectItem>
                   {analyticsData?.performance_data.map((staff) => (
                     <SelectItem key={staff.staff_id} value={staff.staff_id}>
                       {staff.staff_name} ({staff.staff_role})

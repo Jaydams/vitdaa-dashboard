@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 import { cn } from "@/lib/utils";
@@ -9,7 +9,7 @@ import Typography from "@/components/ui/typography";
 import { getUnreadNotificationCount } from "@/actions/notification-actions";
 
 const NotificationsBadge = () => {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const {
     data: notificationCount,

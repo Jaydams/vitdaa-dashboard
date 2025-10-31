@@ -251,7 +251,7 @@ vi.mock("@/components/staff/EnhancedInventoryManager", () => ({
         .update({
           status: "approved",
           approved_at: new Date().toISOString(),
-          approved_by_admin_id: staffSession.staff_id,
+          approved_by_admin_id: staffSession.staff.id,
         })
         .eq("id", requestId);
 
@@ -431,8 +431,8 @@ vi.mock("@/components/staff/EnhancedInventoryManager", () => ({
               onClick={async () => {
                 const supabase = require("@/lib/supabase/client").supabase;
                 await supabase.from("inventory_requests").insert({
-                  business_id: staffSession.business_id,
-                  requested_by_staff_id: staffSession.staff_id,
+                  business_id: staffSession.business.id,
+                  requested_by_staff_id: staffSession.staff.id,
                   status: "pending",
                 });
               }}

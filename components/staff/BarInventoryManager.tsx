@@ -244,7 +244,7 @@ export default function BarInventoryManager({
           transaction_type: transactionType,
           quantity: Math.abs(stockDifference),
           total_cost: totalCost,
-          staff_id: staffSession.staff_id,
+          staff_id: staffSession.staff.id,
         }),
       });
 
@@ -326,8 +326,8 @@ export default function BarInventoryManager({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          staff_id: staffSession.staff_id,
-          staff_session_id: staffSession.id,
+          staff_id: staffSession.staff.id,
+          staff_session_id: staffSession.sessionRecord.id,
           ...activityData,
         }),
       });

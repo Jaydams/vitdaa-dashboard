@@ -3,12 +3,10 @@ import { cookies } from "next/headers";
 
 import Header from "@/components/shared/header";
 import AppSidebar from "@/components/shared/AppSidebar";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import NewOrderModal from "@/components/notifications/NewOrderModal";
 import { getServerBusinessOwnerId } from "@/lib/getServerBusinessOwnerId";
 import { ResponsiveDashboardProvider } from "@/components/responsive/ResponsiveDashboardProvider";
-import { AdaptiveDashboardLayout } from "@/components/responsive/AdaptiveLayouts";
-import { ResponsiveContainer } from "@/components/responsive/ResponsiveLayout";
 
 export default async function RootLayout({
   children,
@@ -29,20 +27,16 @@ export default async function RootLayout({
   return (
     <ResponsiveDashboardProvider>
       <SidebarProvider defaultOpen={defaultOpen}>
-        <AdaptiveDashboardLayout sidebar={<AppSidebar />} header={<Header />}>
-          <ResponsiveContainer
-            padding={{
-              mobile: "px-4 py-6",
-              tablet: "px-6 py-6",
-              desktop: "px-8 py-8",
-            }}
-          >
+        <AppSidebar />
+        <SidebarInset>
+          <Header />
+          <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
             {children}
-          </ResponsiveContainer>
+          </div>
+        </SidebarInset>
 
-          {/* Order notification modal */}
-          {businessId && <NewOrderModal businessId={businessId} />}
-        </AdaptiveDashboardLayout>
+        {/* Order notification modal */}
+        {businessId && <NewOrderModal businessId={businessId} />}
       </SidebarProvider>
     </ResponsiveDashboardProvider>
   );

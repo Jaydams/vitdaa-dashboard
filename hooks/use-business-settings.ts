@@ -56,6 +56,8 @@ export function useBusinessSettings(): UseBusinessSettingsReturn {
         business_id: businessOwnerId,
         vat_rate: 7.5,
         service_charge_rate: 2.5,
+        enabled_dining_options: ["indoor", "delivery"],
+        default_takeaway_pack_price: 100,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       });
@@ -102,7 +104,7 @@ export function useBusinessSettings(): UseBusinessSettingsReturn {
     if (businessOwnerId) {
       fetchSettings();
     }
-  }, [businessOwnerId, fetchSettings]);
+  }, [businessOwnerId]); // Remove fetchSettings from dependency array to prevent loops
 
   return {
     settings,

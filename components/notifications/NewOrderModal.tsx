@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
@@ -56,7 +56,7 @@ export default function NewOrderModal({ businessId }: NewOrderModalProps) {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [orderQueue, setOrderQueue] = useState<NewOrder[]>([]);
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   // Play notification sound
   const playNotificationSound = () => {
@@ -110,22 +110,22 @@ export default function NewOrderModal({ businessId }: NewOrderModalProps) {
 
             // Update the existing notification to reflect the new status
             supabase
-              .from('notifications')
+              .from("notifications")
               .update({
-                type: 'order_status_change',
+                type: "order_status_change",
                 title: `Order #${updatedOrder.invoice_no} status updated`,
                 message: `Order status changed to ${updatedOrder.status}`,
                 data: {
                   order_id: updatedOrder.id,
                   invoice_no: updatedOrder.invoice_no,
-                  previous_status: 'pending',
+                  previous_status: "pending",
                   new_status: updatedOrder.status,
                   customer_name: updatedOrder.customer_name,
                 },
                 is_read: false,
               })
-              .eq('type', 'new_order')
-              .eq('data->order_id', updatedOrder.id)
+              .eq("type", "new_order")
+              .eq("data->order_id", updatedOrder.id)
               .then(({ error }) => {
                 if (error) {
                   console.error("Error updating notification:", error);

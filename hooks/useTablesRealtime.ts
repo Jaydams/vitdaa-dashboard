@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 interface Table {
@@ -15,7 +15,7 @@ export function useTablesRealtime() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const loadTables = async () => {
     try {
@@ -23,7 +23,9 @@ export function useTablesRealtime() {
       setError(null);
 
       // Get current business owner ID
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         setError("User not authenticated");
         return;
@@ -72,17 +74,17 @@ export function useTablesRealtime() {
   useEffect(() => {
     // Subscribe to realtime changes on tables table
     const channel = supabase
-      .channel('tables-changes')
+      .channel("tables-changes")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'tables',
+          event: "*",
+          schema: "public",
+          table: "tables",
         },
         (payload) => {
-          console.log('Tables realtime change:', payload);
-          
+          console.log("Tables realtime change:", payload);
+
           // Reload tables when there are changes
           loadTables();
         }
@@ -104,4 +106,4 @@ export function useTablesRealtime() {
     error,
     refresh,
   };
-} 
+}

@@ -1,17 +1,21 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
 import Typography from "@/components/ui/typography";
 import NotificationItem from "./NotificationItem";
 import NotificationItemSkeleton from "./NotificationItemSkeleton";
-import { fetchNotifications, markNotificationAsRead, markAllNotificationsAsRead } from "@/actions/notification-actions";
+import {
+  fetchNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+} from "@/actions/notification-actions";
 
 export default function NotificationContent() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const {
     data: notifications,
@@ -174,7 +178,7 @@ export default function NotificationContent() {
             </button>
           </div>
         </div>
-        
+
         {/* Notification list */}
         {notifications.map((notification, index) => (
           <NotificationItem

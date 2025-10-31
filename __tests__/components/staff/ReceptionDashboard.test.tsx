@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
-import ReceptionDashboard from "@/components/staff/ReceptionDashboard";
+import { ReceptionDashboardWithSync } from "@/components/staff/ReceptionDashboardWithSync";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Mock dependencies
@@ -33,22 +33,34 @@ vi.mock("@/lib/supabase/client", () => ({
 }));
 
 const mockStaffSession = {
-  id: "session-1",
-  staff_id: "staff-1",
-  business_id: "business-1",
-  role: "reception" as const,
-  permissions: {
-    orders: { create: true, read: true, update: true, delete: false },
-    tables: { manage: true },
-    customers: { create: true, read: true, update: true },
-    payments: { process: true },
+  sessionRecord: {
+    id: "session-1",
+    staff_id: "staff-1",
+    business_id: "business-1",
+    expires_at: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(), // 8 hours from now
   },
   staff: {
     id: "staff-1",
-    name: "John Doe",
+    first_name: "John",
+    last_name: "Doe",
     email: "john@example.com",
-    role: "reception",
+    role: "reception" as const,
   },
+  business: {
+    id: "business-1",
+    business_name: "Test Restaurant",
+  },
+  permissions: [
+    "orders:create",
+    "orders:read",
+    "orders:update",
+    "tables:read",
+    "tables:update",
+    "customers:create",
+    "customers:read",
+    "customers:update",
+    "payments:process",
+  ],
 };
 
 const createTestQueryClient = () =>
@@ -74,42 +86,39 @@ describe("ReceptionDashboard", () => {
   describe("Role-based rendering and permission enforcement", () => {
     it("renders reception dashboard for reception staff", () => {
       renderWithProviders(
-        <ReceptionDashboard staffSession={mockStaffSession} />
+        <ReceptionDashboardWithSync staffSession={mockStaffSession} />
       );
 
-      expect(screen.getByText("Reception Dashboard")).toBeInTheDocument();
-      expect(screen.getByText("Create Order")).toBeInTheDocument();
-      expect(screen.getByText("Table Management")).toBeInTheDocument();
-      expect(screen.getByText("Customer Management")).toBeInTheDocument();
+      expect(screen.getByText("Create New Order")).toBeInTheDocument();
+      expect(screen.getByText("Open Tickets")).toBeInTheDocument();
     });
 
-    it("shows create order button when user has create permissions", () => {
+    it("shows create order tab when user has create permissions", () => {
       renderWithProviders(
-        <ReceptionDashboard staffSession={mockStaffSession} />
+        <ReceptionDashboardWithSync staffSession={mockStaffSession} />
       );
 
-      const createOrderButton = screen.getByRole("button", {
-        name: /create order/i,
+      const createOrderTab = screen.getByRole("tab", {
+        name: /create new order/i,
       });
-      expect(createOrderButton).toBeInTheDocument();
-      expect(createOrderButton).not.toBeDisabled();
+      expect(createOrderTab).toBeInTheDocument();
+      expect(createOrderTab).not.toBeDisabled();
     });
 
-    it("hides create order button when user lacks create permissions", () => {
+    it("hides create order tab when user lacks create permissions", () => {
       const restrictedSession = {
         ...mockStaffSession,
-        permissions: {
-          ...mockStaffSession.permissions,
-          orders: { ...mockStaffSession.permissions.orders, create: false },
-        },
+        permissions: mockStaffSession.permissions.filter(
+          (p) => p !== "orders:create"
+        ),
       };
 
       renderWithProviders(
-        <ReceptionDashboard staffSession={restrictedSession} />
+        <ReceptionDashboardWithSync staffSession={restrictedSession} />
       );
 
       expect(
-        screen.queryByRole("button", { name: /create order/i })
+        screen.queryByRole("tab", { name: /create new order/i })
       ).not.toBeInTheDocument();
     });
 

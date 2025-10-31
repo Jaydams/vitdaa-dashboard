@@ -52,9 +52,7 @@ async function validateAdminAuth(
   sessionToken: string
 ): Promise<AuthContext | null> {
   try {
-    const adminSession = await hybridAuth.validateAdminSession(
-      sessionToken
-    );
+    const adminSession = await hybridAuth.validateAdminSession(sessionToken);
     if (!adminSession) {
       return null;
     }
@@ -89,7 +87,7 @@ async function validateStaffAuth(
     const { data: staff } = await supabase
       .from("staff")
       .select("id, first_name, last_name, role, permissions")
-      .eq("id", staffSession.staff_id)
+      .eq("id", staffSession.staff.id)
       .single();
 
     return {

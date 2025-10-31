@@ -105,14 +105,11 @@ export function ResponsiveContainer({
     padding.desktop || padding.tablet || padding.mobile || "px-4"
   );
 
-  const maxWidthClass = maxWidth === "full" ? "w-full" : `max-w-${maxWidth}`;
-
   return (
     <div
       className={cn(
         "responsive-container",
-        "mx-auto w-full",
-        maxWidthClass,
+        maxWidth === "full" ? "w-full" : `max-w-${maxWidth} mx-auto w-full`,
         containerPadding,
         className
       )}

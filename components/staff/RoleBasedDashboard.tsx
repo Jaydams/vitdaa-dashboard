@@ -20,7 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import { StaffSession } from "@/types/auth";
 
 // Import role-specific dashboard components
-import ReceptionDashboard from "./ReceptionDashboard";
+import { ReceptionDashboardWithSync } from "./ReceptionDashboardWithSync";
 import KitchenDashboard from "./KitchenDashboard";
 import BarDashboard from "./BarDashboard";
 import AccountantDashboard from "./AccountantDashboard";
@@ -241,7 +241,7 @@ export default function RoleBasedDashboard({
       case "reception":
         return (
           <ResponsiveDashboardProvider>
-            <ReceptionDashboard staffSession={staffSession} />
+            <ReceptionDashboardWithSync staffSession={staffSession} />
           </ResponsiveDashboardProvider>
         );
       case "kitchen":
@@ -316,8 +316,8 @@ export default function RoleBasedDashboard({
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Enhanced Staff Session Header - Responsive */}
-      <Card className="border-0 shadow-sm bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
+      {/* Enhanced Staff Session Header - Desktop Only */}
+      <Card className="hidden md:block border-0 shadow-sm bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
         <CardHeader className="pb-4">
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 lg:gap-6">
             {/* Staff Info Section - Responsive */}

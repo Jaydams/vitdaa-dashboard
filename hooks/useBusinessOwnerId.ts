@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -7,11 +7,11 @@ import { createClient } from "@/lib/supabase/client";
  */
 export function useBusinessOwnerId(): string | null {
   const [ownerId, setOwnerId] = useState<string | null>(null);
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     async function fetchOwnerId() {
       try {
-        const supabase = createClient();
         const {
           data: { user },
         } = await supabase.auth.getUser();
@@ -27,7 +27,7 @@ export function useBusinessOwnerId(): string | null {
       }
     }
     fetchOwnerId();
-  }, []);
+  }, [supabase]);
 
   return ownerId;
 }

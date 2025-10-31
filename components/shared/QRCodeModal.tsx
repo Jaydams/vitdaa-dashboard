@@ -230,7 +230,7 @@ export default function QRCodeModal({ children }: QRCodeModalProps) {
   };
 
   return (
-    <Dialog suppressHydrationWarning>
+    <Dialog >
       <DialogTrigger asChild suppressHydrationWarning>
         {children}
       </DialogTrigger>

@@ -398,35 +398,34 @@ export default function ReceptionDashboard({
   return (
     <ResponsiveContainer>
       {/* Menu Grid Order Interface */}
-      {showMenuGrid && (
-        <PermissionGuard
-          permissions={permissions}
-          requiredPermission="orders:create"
-        >
-          <Card className="mb-6">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-              <CardTitle className="flex items-center gap-2">
-                <ShoppingCart className="h-5 w-5" />
-                Create New Order
-              </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowMenuGrid(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <StaffMenuGridOrderInterface
-                businessId={staffSession.business.id}
-                staffRole="reception"
-                onOrderCreated={handleOrderCreated}
-              />
-            </CardContent>
-          </Card>
-        </PermissionGuard>
-      )}
+
+      <PermissionGuard
+        permissions={permissions}
+        requiredPermission="orders:create"
+      >
+        <Card className="mb-6">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              Create New Order
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowMenuGrid(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <StaffMenuGridOrderInterface
+              businessId={staffSession.business.id}
+              staffRole="reception"
+              onOrderCreated={handleOrderCreated}
+            />
+          </CardContent>
+        </Card>
+      </PermissionGuard>
 
       {/* Enhanced Quick Stats */}
       <AdaptiveStatsGrid>
@@ -520,7 +519,7 @@ export default function ReceptionDashboard({
       </AdaptiveStatsGrid>
 
       {/* Enhanced Quick Actions */}
-      <TouchCard className="mt-6">
+      {/* <TouchCard className="mt-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
@@ -559,7 +558,6 @@ export default function ReceptionDashboard({
               </TouchButton>
             </PermissionGuard>
 
-            {/* Quick Order and Customer Lookup buttons removed due to API issues */}
 
             <PermissionGuard
               permissions={permissions}
@@ -576,7 +574,7 @@ export default function ReceptionDashboard({
             </PermissionGuard>
           </ResponsiveGrid>
         </CardContent>
-      </TouchCard>
+      </TouchCard> */}
 
       {/* Main Content Grid */}
       <div className="mt-6 space-y-6">
@@ -732,7 +730,7 @@ export default function ReceptionDashboard({
           </PermissionGuard> */}
 
           {/* Customer Management Section */}
-          <PermissionGuard
+          {/* <PermissionGuard
             permissions={permissions}
             requiredPermission="customers:read"
           >
@@ -747,7 +745,7 @@ export default function ReceptionDashboard({
                 handleViewOrderDetails(orderId);
               }}
             />
-          </PermissionGuard>
+          </PermissionGuard> */}
         </ResponsiveGrid>
       </div>
 

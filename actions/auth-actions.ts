@@ -291,10 +291,13 @@ export async function staffLogin(formData: FormData) {
     let businessId = cookieStore.get("staff_business_id")?.value;
 
     console.log("Business ID from cookie:", businessId);
-    
+
     // Debug: List all available cookies
     const allCookies = cookieStore.getAll();
-    console.log("All available cookies:", allCookies.map(c => ({ name: c.name, value: c.value })));
+    console.log(
+      "All available cookies:",
+      allCookies.map((c) => ({ name: c.name, value: c.value }))
+    );
 
     // If no business ID in cookie, try to get it from URL parameters
     if (!businessId) {
@@ -350,17 +353,19 @@ export async function staffLogin(formData: FormData) {
     console.log("Executing query...");
     const { data: staffMembers, error } = await query;
 
-    console.log("Raw query result:", { 
-      staffCount: staffMembers?.length || 0, 
+    console.log("Raw query result:", {
+      staffCount: staffMembers?.length || 0,
       error: error?.message,
       errorCode: error?.code,
-      foundStaff: staffMembers?.[0] ? {
-        id: staffMembers[0].id,
-        email: staffMembers[0].email,
-        username: staffMembers[0].username,
-        is_active: staffMembers[0].is_active,
-        business_id: staffMembers[0].business_id
-      } : null
+      foundStaff: staffMembers?.[0]
+        ? {
+            id: staffMembers[0].id,
+            email: staffMembers[0].email,
+            username: staffMembers[0].username,
+            is_active: staffMembers[0].is_active,
+            business_id: staffMembers[0].business_id,
+          }
+        : null,
     });
 
     if (error || !staffMembers || staffMembers.length === 0) {
@@ -376,7 +381,7 @@ export async function staffLogin(formData: FormData) {
       username: staff.username,
       is_active: staff.is_active,
       hasPinHash: !!staff.pin_hash,
-      business_id: staff.business_id
+      business_id: staff.business_id,
     });
 
     // Rate limiting check
@@ -404,7 +409,10 @@ export async function staffLogin(formData: FormData) {
     // Validate PIN
     const isValidPin = await verifyPin(pin, staff.pin_hash);
 
-    console.log("PIN verification result:", { isValidPin, pinLength: pin.length });
+    console.log("PIN verification result:", {
+      isValidPin,
+      pinLength: pin.length,
+    });
 
     if (!isValidPin) {
       console.log("Invalid PIN");
@@ -435,7 +443,7 @@ export async function staffLogin(formData: FormData) {
     const staffSession = await createStaffSession(
       staff.id,
       staff.business_id,
-      businessOwner.id  // Use business owner ID instead of business_id
+      businessOwner.id // Use business owner ID instead of business_id
     );
 
     if (!staffSession) {
@@ -446,17 +454,21 @@ export async function staffLogin(formData: FormData) {
     // Reuse the existing cookieStore variable from earlier in the function
 
     // Set secure HTTP-only cookie with session token
-    cookieStore.set("staff_session_token", staffSession.session_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 8 * 60 * 60, // 8 hours
-      path: "/",
-    });
+    cookieStore.set(
+      "staff_session_token",
+      staffSession.sessionRecord.session_token,
+      {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 8 * 60 * 60, // 8 hours
+        path: "/",
+      }
+    );
 
     // Log successful authentication
     await logStaffPinSuccess(staff.business_id, staff.id, {
-      sessionId: staffSession.id,
+      sessionId: staffSession.sessionRecord.id,
       signedInBy: staff.business_id,
     });
 
@@ -466,7 +478,10 @@ export async function staffLogin(formData: FormData) {
       staff.id,
       "staff_login",
       staff.id,
-      { loginMethod: "email_username", sessionId: staffSession.id }
+      {
+        loginMethod: "email_username",
+        sessionId: staffSession.sessionRecord.id,
+      }
     );
 
     // Revalidate the path to update any cached data
@@ -476,12 +491,12 @@ export async function staffLogin(formData: FormData) {
     redirect("/staffs");
   } catch (error) {
     console.error("Staff login error:", error);
-    
+
     // If this is a NEXT_REDIRECT error, re-throw it to allow the redirect to happen
     if (error instanceof Error && error.message.includes("NEXT_REDIRECT")) {
       throw error;
     }
-    
+
     redirect("/staff-login?error=server-error");
   }
 }
@@ -708,7 +723,9 @@ export async function createStaffForm(formData: FormData) {
         // Validate custom permissions
         const validation = validatePermissions(parsedCustomPermissions);
         if (!validation.isValid) {
-          throw new Error(`Invalid permissions: ${validation.invalidPermissions.join(", ")}`);
+          throw new Error(
+            `Invalid permissions: ${validation.invalidPermissions.join(", ")}`
+          );
         }
       } catch (error) {
         console.error("Error parsing custom permissions:", error);
@@ -1769,10 +1786,10 @@ export async function deleteStaff(formData: FormData) {
           // Update session to inactive
           const { error: updateError } = await supabase
             .from("staff_sessions")
-            .update({ 
-              is_active: false, 
+            .update({
+              is_active: false,
               signed_out_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
             })
             .eq("id", session.id);
 
@@ -1823,13 +1840,17 @@ export async function deleteStaff(formData: FormData) {
 
     if (deleteError) {
       console.error("Staff deletion error:", deleteError);
-      
+
       // If deletion fails due to foreign key constraints, provide a more specific error
       if (deleteError.code === "23503") {
-        redirect("/staff?error=staff-has-active-sessions&message=" + 
-          encodeURIComponent("Cannot delete staff member with active sessions. Please sign out all sessions first."));
+        redirect(
+          "/staff?error=staff-has-active-sessions&message=" +
+            encodeURIComponent(
+              "Cannot delete staff member with active sessions. Please sign out all sessions first."
+            )
+        );
       }
-      
+
       redirect("/staff?error=staff-deletion-failed");
     }
 
@@ -2417,7 +2438,7 @@ export async function bulkSignOutStaff(formData: FormData) {
 export async function setStaffLoginCookie(businessId: string) {
   try {
     const cookieStore = await cookies();
-    
+
     // Set secure HTTP-only cookie with business ID
     cookieStore.set("staff_business_id", businessId, {
       httpOnly: true,
